@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robert's Mandarin Trainer — Business & Tech</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #6c8ef7;
+    --accent2: #a78bfa;
+    --success: #34d399;
+    --error: #f87171;
+    --warning: #fbbf24;
+    --text: #e8eaf6;
+    --muted: #7c82a8;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1a1d27 0%, #141728 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo { font-size: 28px; }
+  .header-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .char-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .char-toggle button {
+    padding: 6px 14px;
+    font-size: 12px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .char-toggle button.active {
+    background: var(--accent);
+    color: white;
+    border-radius: 20px;
+  }
+  .score-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* MAIN */
+  .main { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* QUIZ PANEL */
+  .quiz-meta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .category-filter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .cat-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .quiz-progress {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .progress-bar-wrap {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .progress-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 16px;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .quiz-mode-label {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+  .quiz-category-label {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .cat-product { background: #1a2a4a; color: #6c8ef7; }
+  .cat-adtech { background: #2a1a3a; color: #a78bfa; }
+  .cat-ecom { background: #1a2e2a; color: #34d399; }
+  .cat-comms { background: #1e2a2e; color: #22d3ee; }
+  .cat-agile { background: #2e2a1a; color: #fbbf24; }
+
+  .quiz-hanzi {
+    font-size: 52px;
+    font-weight: 300;
+    line-height: 1.2;
+    color: var(--text);
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+  }
+  .quiz-hanzi-trad {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+  }
+  .quiz-pinyin {
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .quiz-pinyin.shown { opacity: 1; }
+  .quiz-english {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .quiz-hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .quiz-show-pinyin {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.2s;
+  }
+  .quiz-show-pinyin:hover { border-color: var(--accent); color: var(--accent); }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .option-btn {
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    line-height: 1.4;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface2); }
+  .option-btn.correct { border-color: var(--success); background: rgba(52,211,153,0.1); color: var(--success); }
+  .option-btn.wrong { border-color: var(--error); background: rgba(248,113,113,0.1); color: var(--error); }
+  .option-btn:disabled { cursor: default; }
+  .option-hanzi { font-size: 20px; letter-spacing: 2px; display: block; margin-bottom: 4px; }
+  .option-pinyin { font-size: 11px; color: var(--muted); }
+
+  .quiz-controls { display: flex; gap: 10px; justify-content: center; }
+  .btn {
+    padding: 10px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #5a7ef5; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .feedback-banner {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .feedback-banner.correct-fb { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+  .feedback-banner.wrong-fb { background: rgba(248,113,113,0.15); color: var(--error); border: 1px solid rgba(248,113,113,0.3); }
+
+  /* QUIZ TOGGLE */
+  .quiz-type-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .quiz-type-toggle button {
+    padding: 6px 14px;
+    font-size: 12px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .quiz-type-toggle button.active {
+    background: var(--accent2);
+    color: white;
+    border-radius: 20px;
+  }
+
+  /* PRONUNCIATION PANEL */
+  .pronunciation-intro {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .pronunciation-intro h3 { font-size: 15px; color: var(--accent); margin-bottom: 12px; }
+  .heritage-tips { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tip-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    border-left: 3px solid var(--accent2);
+  }
+  .tip-card h4 { font-size: 13px; color: var(--accent2); margin-bottom: 6px; }
+  .tip-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .tip-card code { background: var(--surface); padding: 1px 5px; border-radius: 4px; color: var(--warning); font-size: 11px; }
+
+  .phrase-section { margin-bottom: 28px; }
+  .phrase-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .phrase-grid { display: flex; flex-direction: column; gap: 8px; }
+  .phrase-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .phrase-row:hover { border-color: var(--accent); }
+  .phrase-row.playing { border-color: var(--accent2); background: var(--surface2); }
+  .play-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .phrase-row:hover .play-btn { background: var(--accent); border-color: var(--accent); }
+  .phrase-row.playing .play-btn { background: var(--accent2); border-color: var(--accent2); }
+  .phrase-chinese {
+    flex: 0 0 auto;
+    min-width: 160px;
+  }
+  .phrase-simp { font-size: 22px; color: var(--text); letter-spacing: 2px; line-height: 1.2; }
+  .phrase-trad { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; }
+  .phrase-details { flex: 1; }
+  .phrase-pinyin-text { font-size: 13px; color: var(--accent); margin-bottom: 3px; }
+  .phrase-english { font-size: 13px; color: var(--muted); }
+  .phrase-note {
+    font-size: 11px;
+    color: var(--warning);
+    background: rgba(251,191,36,0.1);
+    padding: 3px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+    max-width: 180px;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* TONES SECTION */
+  .tones-display {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tone-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+  }
+  .tone-mark { font-size: 32px; color: var(--accent); font-weight: 300; margin-bottom: 4px; }
+  .tone-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .tone-example { font-size: 20px; color: var(--text); margin-bottom: 4px; }
+  .tone-meaning { font-size: 11px; color: var(--muted); }
+  .tone-desc { font-size: 11px; color: var(--accent2); margin-top: 6px; }
+  .tone-play {
+    margin-top: 10px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .tone-play:hover { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* ADD WORDS PANEL */
+  .add-words-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 680px) { .add-words-layout { grid-template-columns: 1fr; } }
+  .add-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .add-form-card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--muted); }
+  .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .form-select option { background: var(--surface2); color: var(--text); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-add {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.2s;
+  }
+  .btn-add:hover { background: #5a7ef5; }
+  .add-success { background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.3); color: var(--success); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; display: none; }
+  .add-error { background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); color: var(--error); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; display: none; }
+
+  /* Bulk import */
+  .bulk-tip { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+  .bulk-tip code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; color: var(--warning); font-size: 11px; font-family: monospace; }
+  .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: monospace;
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.6;
+  }
+  .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea::placeholder { color: var(--muted); }
+
+  /* Custom words list */
+  .custom-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .custom-list-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+  .custom-count { font-size: 12px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 12px; }
+  .custom-word-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .custom-word-main { flex: 1; }
+  .custom-word-simp { font-size: 18px; color: var(--text); letter-spacing: 1px; }
+  .custom-word-pinyin { font-size: 12px; color: var(--accent); margin-top: 2px; }
+  .custom-word-en { font-size: 12px; color: var(--muted); }
+  .custom-word-cat { font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600; flex-shrink: 0; }
+  .btn-delete-word {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .btn-delete-word:hover { border-color: var(--error); color: var(--error); background: rgba(248,113,113,0.1); }
+  .empty-custom { text-align: center; color: var(--muted); font-size: 13px; padding: 32px 0; }
+
+  /* REFERENCE PANEL */
+  .search-bar {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-bar:focus { border-color: var(--accent); }
+  .search-bar::placeholder { color: var(--muted); }
+  .ref-table { width: 100%; border-collapse: collapse; }
+  .ref-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .ref-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    font-size: 14px;
+  }
+  .ref-table tr:hover td { background: var(--surface2); }
+  .ref-simp { font-size: 20px; letter-spacing: 2px; }
+  .ref-trad { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .ref-pinyin { color: var(--accent); font-size: 13px; }
+  .ref-english { color: var(--text); }
+  .ref-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .cat-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ref-play {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+  }
+  .ref-play:hover { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* RESULT SCREEN */
+  .result-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .result-screen.show { display: block; }
+  .result-emoji { font-size: 64px; margin-bottom: 16px; }
+  .result-score { font-size: 48px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .result-label { font-size: 18px; color: var(--muted); margin-bottom: 24px; }
+  .result-breakdown {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .result-stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 24px; }
+  .result-stat-num { font-size: 28px; font-weight: 700; }
+  .result-stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .correct-num { color: var(--success); }
+  .wrong-num { color: var(--error); }
+
+  /* No TTS notice */
+  .no-tts { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: var(--warning); padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .options-grid { grid-template-columns: 1fr; }
+    .heritage-tips { grid-template-columns: 1fr; }
+    .tones-display { grid-template-columns: 1fr 1fr; }
+    .header { flex-wrap: wrap; }
+    .phrase-note { display: none; }
+    .quiz-hanzi { font-size: 40px; }
+  }
+
+  /* READING PANEL */
+  .reading-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .reading-controls .toggle-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+  }
+  .reading-controls .toggle-pill.on { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  .toggle-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-pill.on .toggle-dot { background: var(--accent); }
+
+  .passage-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .passage-btn {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .passage-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .passage-btn.active { background: var(--accent2); border-color: var(--accent2); color: white; }
+
+  .passage-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 16px;
+  }
+  .passage-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  .passage-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .passage-meta { font-size: 12px; color: var(--muted); }
+  .level-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .level-b2 { background: #1a2a4a; color: #6c8ef7; }
+  .level-c1 { background: #2a1a3a; color: #a78bfa; }
+
+  .passage-body { line-height: 2.4; }
+  .passage-para { margin-bottom: 18px; }
+  .passage-para:last-child { margin-bottom: 0; }
+
+  .w {
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 1px;
+    transition: background 0.15s;
+    vertical-align: bottom;
+  }
+  .w:hover { background: rgba(108,142,247,0.15); }
+  .w .hanzi { font-size: 20px; color: var(--text); line-height: 1; display: block; }
+  .w .ruby-pin {
+    display: block;
+    font-size: 10px;
+    color: var(--accent);
+    text-align: center;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    min-width: 100%;
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .show-pinyin .ruby-pin { opacity: 1; }
+  .punct { font-size: 20px; color: var(--muted); line-height: 1; vertical-align: bottom; display: inline-block; }
+
+  /* Word tooltip */
+  .word-tooltip {
+    position: fixed;
+    background: #1a1d27;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    z-index: 999;
+    pointer-events: none;
+    max-width: 260px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .wt-hanzi { font-size: 24px; color: var(--text); letter-spacing: 2px; margin-bottom: 4px; }
+  .wt-pinyin { font-size: 14px; color: var(--accent); margin-bottom: 4px; }
+  .wt-en { font-size: 13px; color: var(--muted); }
+  .wt-note { font-size: 11px; color: var(--warning); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+  .passage-translation {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent2);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-top: 20px;
+    display: none;
+  }
+  .passage-translation.visible { display: block; }
+  .passage-translation strong { color: var(--accent2); font-size: 11px; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .grammar-notes {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    display: none;
+  }
+  .grammar-notes.visible { display: block; }
+  .grammar-notes h4 { font-size: 12px; color: var(--warning); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .grammar-note-item { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.6; padding-left: 12px; border-left: 2px solid var(--border); }
+  .grammar-note-item code { background: var(--surface); color: var(--text); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+  @media (max-width: 600px) {
+    .passage-card { padding: 18px 16px; }
+    .w .hanzi { font-size: 18px; }
+    .punct { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🀄</div>
+  <div>
+    <div class="header-title">Mandarin Trainer</div>
+    <div class="header-sub">Business & Tech · TOCFL Level 4 · Heritage Speaker</div>
+  </div>
+  <div class="header-right">
+    <div class="char-toggle">
+      <button id="charSimp" onclick="setCharMode('simp')">简</button>
+      <button id="charBoth" class="active" onclick="setCharMode('both')">简/繁</button>
+      <button id="charTrad" onclick="setCharMode('trad')">繁</button>
+    </div>
+    <div class="score-badge" id="scoreBadge">Score: 0/0</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('quiz')">📝 Quiz</div>
+  <div class="tab" onclick="switchTab('pronunciation')">🔊 Pronunciation</div>
+  <div class="tab" onclick="switchTab('reference')">📚 Reference</div>
+  <div class="tab" onclick="switchTab('addwords')">➕ Add Words</div>
+  <div class="tab" onclick="switchTab('reading')">📖 Reading</div>
+</div>
+
+<div class="main">
+
+  <!-- NO TTS NOTICE -->
+  <div class="no-tts" id="noTtsNotice">⚠️ Chinese TTS voice not detected in your browser. Try Chrome or Edge for audio playback. Text content works fully.</div>
+
+  <!-- ===== QUIZ PANEL ===== -->
+  <div class="panel active" id="panel-quiz">
+
+    <div class="quiz-meta">
+      <div class="category-filter">
+        <div class="cat-btn active" onclick="setCat('all', this)">All</div>
+        <div class="cat-btn" onclick="setCat('product', this)">📋 Product / PRD</div>
+        <div class="cat-btn" onclick="setCat('adtech', this)">📊 AdTech</div>
+        <div class="cat-btn" onclick="setCat('ecom', this)">🛒 Ecommerce</div>
+        <div class="cat-btn" onclick="setCat('agile', this)">🔄 Agile</div>
+        <div class="cat-btn" onclick="setCat('comms', this)">✉️ Correspondence</div>
+      </div>
+      <div class="quiz-type-toggle">
+        <button id="qtype-cn2en" class="active" onclick="setQType('cn2en')">中→EN</button>
+        <button id="qtype-en2cn" onclick="setQType('en2cn')">EN→中</button>
+      </div>
+    </div>
+
+    <div class="quiz-progress">
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+      <div class="progress-text" id="progressText">0 / 0</div>
+    </div>
+
+    <div id="quizMain">
+      <div class="quiz-card" id="quizCard">
+        <div class="quiz-mode-label" id="quizModeLabel">中 → EN</div>
+        <div class="quiz-category-label cat-product" id="quizCatLabel">Product</div>
+        <div class="quiz-hanzi" id="quizHanzi">产品需求文档</div>
+        <div class="quiz-hanzi-trad" id="quizHanziTrad">產品需求文件</div>
+        <div class="quiz-pinyin" id="quizPinyin">chǎnpǐn xūqiú wéndàng</div>
+        <button class="quiz-show-pinyin" onclick="togglePinyin()" id="pinyinBtn">Show pinyin</button>
+      </div>
+      <div class="feedback-banner" id="feedbackBanner"></div>
+      <div class="options-grid" id="optionsGrid"></div>
+      <div class="quiz-controls">
+        <button class="btn btn-secondary" onclick="skipQuestion()">Skip →</button>
+        <button class="btn btn-primary" onclick="newQuiz()">New Quiz ↺</button>
+      </div>
+    </div>
+
+    <div class="result-screen" id="resultScreen">
+      <div class="result-emoji" id="resultEmoji">🎉</div>
+      <div class="result-score" id="resultScore">8/10</div>
+      <div class="result-label" id="resultLabel">Great work!</div>
+      <div class="result-breakdown">
+        <div class="result-stat"><div class="result-stat-num correct-num" id="resCorrect">8</div><div class="result-stat-label">Correct</div></div>
+        <div class="result-stat"><div class="result-stat-num wrong-num" id="resWrong">2</div><div class="result-stat-label">Wrong</div></div>
+        <div class="result-stat"><div class="result-stat-num" id="resTotal" style="color:var(--text)">10</div><div class="result-stat-label">Total</div></div>
+      </div>
+      <button class="btn btn-primary" onclick="newQuiz()" style="margin-right:10px">New Quiz ↺</button>
+      <button class="btn btn-secondary" onclick="reviewMissed()">Review Missed</button>
+    </div>
+  </div>
+
+  <!-- ===== PRONUNCIATION PANEL ===== -->
+  <div class="panel" id="panel-pronunciation">
+
+    <div class="pronunciation-intro">
+      <h3>🎯 Heritage Speaker Accent Tips</h3>
+      <div class="heritage-tips">
+        <div class="tip-card">
+          <h4>⚠️ Retroflex Consonants</h4>
+          <p>Heritage speakers often substitute flat sounds. Practice: <code>zh</code> vs <code>z</code>, <code>ch</code> vs <code>c</code>, <code>sh</code> vs <code>s</code>, <code>r</code> vs <code>y/l</code>. Key words: <code>需求</code> (xūqiú), <code>设计</code> (shèjì)</p>
+        </div>
+        <div class="tip-card">
+          <h4>⚠️ Tone 3 Sandhi</h4>
+          <p>Two 3rd tones in a row: the first becomes 2nd. <code>产品</code> sounds like <code>chánpǐn</code> not <code>chǎnpǐn</code>. Very common in business vocab.</p>
+        </div>
+        <div class="tip-card">
+          <h4>⚠️ Final -n vs -ng</h4>
+          <p>Don't conflate <code>-n</code> and <code>-ng</code>. <code>功能</code> (gōng néng) has -ng then -ng. <code>品牌</code> (pǐnpái) ends in -n. Keep them distinct.</p>
+        </div>
+        <div class="tip-card">
+          <h4>⚠️ Neutral Tone</h4>
+          <p>Business speech has fewer neutral tones than casual speech. Fully pronounce characters in formal terms: <code>产品经理</code> — all four characters get full tones in professional context.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-size: 14px; color: var(--muted); margin-bottom: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎵 The Four Tones</h3>
+    <div class="tones-display">
+      <div class="tone-card">
+        <div class="tone-mark">ā</div>
+        <div class="tone-name">1st Tone · High Level</div>
+        <div class="tone-example">妈 (māo)</div>
+        <div class="tone-meaning">mother / cat</div>
+        <div class="tone-desc">Stay high and flat</div>
+        <button class="tone-play" onclick="speakText('妈妈')">▶ 妈妈</button>
+      </div>
+      <div class="tone-card">
+        <div class="tone-mark">á</div>
+        <div class="tone-name">2nd Tone · Rising</div>
+        <div class="tone-example">麻 (má)</div>
+        <div class="tone-meaning">hemp / numb</div>
+        <div class="tone-desc">Rise like a question</div>
+        <button class="tone-play" onclick="speakText('为什么')">▶ 为什么</button>
+      </div>
+      <div class="tone-card">
+        <div class="tone-mark">ǎ</div>
+        <div class="tone-name">3rd Tone · Dip-Rise</div>
+        <div class="tone-example">马 (mǎ)</div>
+        <div class="tone-meaning">horse</div>
+        <div class="tone-desc">Dip low then rise</div>
+        <button class="tone-play" onclick="speakText('产品')">▶ 产品</button>
+      </div>
+      <div class="tone-card">
+        <div class="tone-mark">à</div>
+        <div class="tone-name">4th Tone · Falling</div>
+        <div class="tone-example">骂 (mà)</div>
+        <div class="tone-meaning">scold</div>
+        <div class="tone-desc">Sharp drop, confident</div>
+        <button class="tone-play" onclick="speakText('测试')">▶ 测试</button>
+      </div>
+    </div>
+
+    <div class="phrase-section">
+      <div class="phrase-section-title">📋 Product Management Phrases</div>
+      <div class="phrase-grid" id="phrases-product"></div>
+    </div>
+    <div class="phrase-section">
+      <div class="phrase-section-title">📊 AdTech Phrases</div>
+      <div class="phrase-grid" id="phrases-adtech"></div>
+    </div>
+    <div class="phrase-section">
+      <div class="phrase-section-title">🛒 Ecommerce Phrases</div>
+      <div class="phrase-grid" id="phrases-ecom"></div>
+    </div>
+    <div class="phrase-section">
+      <div class="phrase-section-title">🔄 Agile / Team Phrases</div>
+      <div class="phrase-grid" id="phrases-agile"></div>
+    </div>
+  </div>
+
+  <!-- ===== ADD WORDS PANEL ===== -->
+  <div class="panel" id="panel-addwords">
+    <div class="add-words-layout">
+
+      <!-- LEFT: Add single word -->
+      <div>
+        <div class="add-form-card" style="margin-bottom:20px">
+          <h3>➕ Add a Word</h3>
+          <div id="addSuccessMsg" class="add-success"></div>
+          <div id="addErrorMsg" class="add-error"></div>
+          <div class="form-group">
+            <label class="form-label">Simplified Chinese *</label>
+            <input class="form-input" id="addSimp" placeholder="e.g. 数据分析" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Traditional (optional — leave blank to copy simplified)</label>
+            <input class="form-input" id="addTrad" placeholder="e.g. 數據分析">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pinyin *</label>
+            <input class="form-input" id="addPinyin" placeholder="e.g. shùjù fēnxī">
+          </div>
+          <div class="form-group">
+            <label class="form-label">English meaning *</label>
+            <input class="form-input" id="addEn" placeholder="e.g. Data Analysis">
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Category</label>
+              <select class="form-select" id="addCat">
+                <option value="product">📋 Product / PRD</option>
+                <option value="adtech">📊 AdTech</option>
+                <option value="ecom">🛒 Ecommerce</option>
+                <option value="agile">🔄 Agile</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Note (optional)</label>
+              <input class="form-input" id="addNote" placeholder="Pronunciation tip…">
+            </div>
+          </div>
+          <button class="btn-add" onclick="addSingleWord()" style="margin-top:18px">Add to My Vocab</button>
+        </div>
+
+        <!-- Bulk import -->
+        <div class="add-form-card">
+          <h3>📋 Bulk Import</h3>
+          <p class="bulk-tip">Paste one word per line. Each line should be:<br>
+            <code>simplified | pinyin | english</code><br>
+            or <code>simplified | traditional | pinyin | english</code><br>
+            Example: <code>数据分析 | shùjù fēnxī | Data Analysis</code>
+          </p>
+          <div id="bulkErrorMsg" class="add-error"></div>
+          <div id="bulkSuccessMsg" class="add-success"></div>
+          <div class="form-group">
+            <label class="form-label">Category for all pasted words</label>
+            <select class="form-select" id="bulkCat">
+              <option value="product">📋 Product / PRD</option>
+              <option value="adtech">📊 AdTech</option>
+              <option value="ecom">🛒 Ecommerce</option>
+              <option value="agile">🔄 Agile</option>
+            </select>
+          </div>
+          <textarea class="form-textarea" id="bulkText" placeholder="数据分析 | shùjù fēnxī | Data Analysis&#10;用户画像 | yònghù huàxiàng | User Persona&#10;漏斗模型 | lòudǒu móxíng | Funnel Model"></textarea>
+          <button class="btn-add" onclick="bulkImport()">Import Lines</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: My custom words list -->
+      <div>
+        <div class="custom-list-header">
+          <h3>My Custom Words</h3>
+          <span class="custom-count" id="customCount">0 words</span>
+        </div>
+        <div id="customWordsList"><div class="empty-custom">No custom words yet.<br>Add your first word on the left.</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== REFERENCE PANEL ===== -->
+  <div class="panel" id="panel-reference">
+    <input class="search-bar" type="text" placeholder="Search by Chinese, pinyin, or English..." id="refSearch" oninput="filterRef()">
+    <div style="overflow-x:auto;">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Chinese</th>
+            <th>Pinyin</th>
+            <th>English</th>
+            <th>Category</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="refTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== READING PANEL ===== -->
+  <div class="panel" id="panel-reading">
+
+    <div class="reading-controls">
+      <div class="passage-selector" id="passageSelector"></div>
+      <div class="toggle-pill" id="togglePinyin" onclick="toggleReadingPinyin()">
+        <div class="toggle-dot"></div> Pinyin
+      </div>
+      <div class="toggle-pill" id="toggleTranslation" onclick="toggleTranslation()">
+        <div class="toggle-dot"></div> Translation
+      </div>
+      <div class="toggle-pill" id="toggleGrammar" onclick="toggleGrammar()">
+        <div class="toggle-dot"></div> Notes
+      </div>
+    </div>
+
+    <div id="passageDisplay"></div>
+
+  </div>
+
+  <!-- Word tooltip (shared, outside panels) -->
+  <div class="word-tooltip" id="wordTooltip" style="display:none">
+    <div class="wt-hanzi" id="wtHanzi"></div>
+    <div class="wt-pinyin" id="wtPinyin"></div>
+    <div class="wt-en" id="wtEn"></div>
+    <div class="wt-note" id="wtNote" style="display:none"></div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG — fill in your values to enable cloud sync
+// Leave as-is to use localStorage (local browser only)
+// ============================================================
+const SUPABASE_URL  = 'YOUR_SUPABASE_URL';       // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';  // eyJ...
+const USE_SUPABASE  = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+const USER_ID       = 'robert';
+let sb = null;
+if (USE_SUPABASE) {
+  try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); }
+  catch(e) { console.warn('Supabase init failed, falling back to localStorage', e); }
+}
+
+// ============================================================
+// VOCABULARY DATA
+// ============================================================
+const vocab = [
+  // ── PRODUCT / PRD ──────────────────────────────────────────
+  { cat:'product', simp:'产品需求文档', trad:'產品需求文件', pinyin:'chǎnpǐn xūqiú wéndàng', en:'Product Requirements Document (PRD)', note:'PRD — core doc you write daily' },
+  { cat:'product', simp:'用户故事', trad:'用戶故事', pinyin:'yònghù gùshi', en:'User Story', note:'3rd tone sandhi on 用户' },
+  { cat:'product', simp:'功能需求', trad:'功能需求', pinyin:'gōngnéng xūqiú', en:'Functional Requirement', note:'' },
+  { cat:'product', simp:'验收标准', trad:'驗收標準', pinyin:'yànshōu biāozhǔn', en:'Acceptance Criteria', note:'' },
+  { cat:'product', simp:'里程碑', trad:'里程碑', pinyin:'lǐchéngbēi', en:'Milestone', note:'Literal: "milestone on a road"' },
+  { cat:'product', simp:'优先级', trad:'優先級', pinyin:'yōuxiānjí', en:'Priority', note:'' },
+  { cat:'product', simp:'排期', trad:'排期', pinyin:'páiqī', en:'Schedule / Timeline', note:'Common in Mainland PM-speak' },
+  { cat:'product', simp:'交付物', trad:'交付物', pinyin:'jiāofùwù', en:'Deliverable', note:'' },
+  { cat:'product', simp:'上线', trad:'上線', pinyin:'shàngxiàn', en:'Go Live / Launch', note:'' },
+  { cat:'product', simp:'对齐', trad:'對齊', pinyin:'duìqí', en:'Alignment / To Align', note:'Common business buzzword' },
+  { cat:'product', simp:'复盘', trad:'復盤', pinyin:'fùpán', en:'Debrief / Post-mortem', note:'Lit: "replay the board game"' },
+  { cat:'product', simp:'接口', trad:'接口', pinyin:'jiēkǒu', en:'Interface / API endpoint', note:'' },
+  { cat:'product', simp:'前端', trad:'前端', pinyin:'qiánduan', en:'Frontend', note:'' },
+  { cat:'product', simp:'后端', trad:'後端', pinyin:'hòuduān', en:'Backend', note:'' },
+  { cat:'product', simp:'测试用例', trad:'測試用例', pinyin:'cèshì yònglì', en:'Test Case', note:'' },
+  { cat:'product', simp:'版本迭代', trad:'版本迭代', pinyin:'bǎnběn diédài', en:'Version Iteration', note:'' },
+  { cat:'product', simp:'需求评审', trad:'需求評審', pinyin:'xūqiú píngshěn', en:'Requirements Review', note:'' },
+  { cat:'product', simp:'产品经理', trad:'產品經理', pinyin:'chǎnpǐn jīnglǐ', en:'Product Manager', note:'All 4 chars get full tone in formal speech' },
+
+  // ── ADTECH ─────────────────────────────────────────────────
+  { cat:'adtech', simp:'竞价排名', trad:'競價排名', pinyin:'jìngjià páimíng', en:'Paid Search Ranking / Bidding', note:'' },
+  { cat:'adtech', simp:'关键词', trad:'關鍵詞', pinyin:'guānjiàncí', en:'Keyword', note:'' },
+  { cat:'adtech', simp:'投放', trad:'投放', pinyin:'tóufàng', en:'Ad Delivery / Campaign Launch', note:'Key AdTech verb' },
+  { cat:'adtech', simp:'转化率', trad:'轉化率', pinyin:'zhuǎnhuàlǜ', en:'Conversion Rate', note:'CVR' },
+  { cat:'adtech', simp:'点击率', trad:'點擊率', pinyin:'diǎnjīlǜ', en:'Click-Through Rate (CTR)', note:'' },
+  { cat:'adtech', simp:'曝光量', trad:'曝光量', pinyin:'bàoguāngliàng', en:'Impressions', note:'' },
+  { cat:'adtech', simp:'出价', trad:'出價', pinyin:'chūjià', en:'Bid / Bid Price', note:'' },
+  { cat:'adtech', simp:'广告主', trad:'廣告主', pinyin:'guǎnggàozhǔ', en:'Advertiser', note:'' },
+  { cat:'adtech', simp:'预算', trad:'預算', pinyin:'yùsuàn', en:'Budget', note:'' },
+  { cat:'adtech', simp:'投资回报率', trad:'投資回報率', pinyin:'tóuzī huíbào lǜ', en:'ROI (Return on Investment)', note:'Often abbreviated 投回比' },
+  { cat:'adtech', simp:'千次展示费用', trad:'千次展示費用', pinyin:'qiāncì zhǎnshì fèiyòng', en:'CPM (Cost Per Mille)', note:'' },
+  { cat:'adtech', simp:'智能投放', trad:'智能投放', pinyin:'zhìnéng tóufàng', en:'Smart / AI-driven Delivery', note:'Predict product context' },
+  { cat:'adtech', simp:'竞价策略', trad:'競價策略', pinyin:'jìngjià cèlüè', en:'Bidding Strategy', note:'' },
+  { cat:'adtech', simp:'流量分配', trad:'流量分配', pinyin:'liúliàng fēnpèi', en:'Traffic Allocation', note:'' },
+  { cat:'adtech', simp:'数据透明度', trad:'數據透明度', pinyin:'shùjù tòumíngdù', en:'Data Transparency', note:'Transparency logs feature' },
+  { cat:'adtech', simp:'归因模型', trad:'歸因模型', pinyin:'guīyīn móxíng', en:'Attribution Model', note:'' },
+
+  // ── ECOMMERCE / TMALL ──────────────────────────────────────
+  { cat:'ecom', simp:'天猫', trad:'天貓', pinyin:'Tiānmāo', en:'Tmall', note:'Lit: "Sky Cat"' },
+  { cat:'ecom', simp:'京东', trad:'京東', pinyin:'Jīngdōng', en:'JD.com', note:'' },
+  { cat:'ecom', simp:'店铺', trad:'店鋪', pinyin:'diànpù', en:'Store / Shop', note:'' },
+  { cat:'ecom', simp:'品牌', trad:'品牌', pinyin:'pǐnpái', en:'Brand', note:'' },
+  { cat:'ecom', simp:'流量', trad:'流量', pinyin:'liúliàng', en:'Traffic / Web Traffic', note:'' },
+  { cat:'ecom', simp:'销售额', trad:'銷售額', pinyin:'xiāoshòué', en:'Sales Revenue / GMV', note:'' },
+  { cat:'ecom', simp:'库存', trad:'庫存', pinyin:'kùcún', en:'Inventory / Stock', note:'' },
+  { cat:'ecom', simp:'大促', trad:'大促', pinyin:'dàcù', en:'Major Sale Event (e.g. 618, 双十一)', note:'e.g. 双十一, 618' },
+  { cat:'ecom', simp:'商家', trad:'商家', pinyin:'shāngjiā', en:'Merchant / Seller', note:'' },
+  { cat:'ecom', simp:'消费者', trad:'消費者', pinyin:'xiāofèizhě', en:'Consumer', note:'' },
+  { cat:'ecom', simp:'类目', trad:'類目', pinyin:'lèimù', en:'Category / Product Category', note:'Platform catalog term' },
+  { cat:'ecom', simp:'搜索排名', trad:'搜索排名', pinyin:'sōusuǒ páimíng', en:'Search Ranking', note:'' },
+  { cat:'ecom', simp:'平台', trad:'平臺', pinyin:'píngtái', en:'Platform', note:'' },
+  { cat:'ecom', simp:'选品', trad:'選品', pinyin:'xuǎnpǐn', en:'Product Selection / Assortment', note:'' },
+  { cat:'ecom', simp:'爆款', trad:'爆款', pinyin:'bàokuǎn', en:'Bestseller / Hit Product', note:'Lit: "exploding style"' },
+  { cat:'ecom', simp:'复购率', trad:'復購率', pinyin:'fùgòulǜ', en:'Repurchase / Retention Rate', note:'' },
+
+  // ── AGILE / TEAM ───────────────────────────────────────────
+  { cat:'agile', simp:'冲刺', trad:'衝刺', pinyin:'chōngcì', en:'Sprint', note:'Lit: "sprint/dash"' },
+  { cat:'agile', simp:'每日站会', trad:'每日站會', pinyin:'měirì zhànhuì', en:'Daily Standup', note:'' },
+  { cat:'agile', simp:'故事点', trad:'故事點', pinyin:'gùshì diǎn', en:'Story Points', note:'Fibonacci estimation' },
+  { cat:'agile', simp:'看板', trad:'看板', pinyin:'kānbǎn', en:'Kanban Board', note:'' },
+  { cat:'agile', simp:'回顾会议', trad:'回顧會議', pinyin:'huígù huìyì', en:'Sprint Retrospective', note:'' },
+  { cat:'agile', simp:'工程师', trad:'工程師', pinyin:'gōngchéngshī', en:'Engineer', note:'' },
+  { cat:'agile', simp:'技术债', trad:'技術債', pinyin:'jìshù zhài', en:'Technical Debt', note:'' },
+  { cat:'agile', simp:'落地', trad:'落地', pinyin:'luòdì', en:'Implementation / To Land (a feature)', note:'Common biz idiom' },
+  { cat:'agile', simp:'拉齐', trad:'拉齊', pinyin:'lāqí', en:'To Sync Up / Align (colloquial)', note:'More casual than 对齐' },
+  { cat:'agile', simp:'迭代计划', trad:'迭代計劃', pinyin:'diédài jìhuà', en:'Sprint / Iteration Plan', note:'' },
+  { cat:'agile', simp:'阻塞项', trad:'阻塞項', pinyin:'zǔsāi xiàng', en:'Blocker', note:'' },
+  { cat:'agile', simp:'需求变更', trad:'需求變更', pinyin:'xūqiú biàngēng', en:'Requirement Change', note:'' },
+  { cat:'agile', simp:'评审通过', trad:'評審通過', pinyin:'píngshěn tōngguò', en:'Review Approved / Passed', note:'' },
+  { cat:'agile', simp:'设计稿', trad:'設計稿', pinyin:'shèjì gǎo', en:'Design Mockup / Draft', note:'' },
+
+  // ── ADVANCED / PREDICT ECOSYSTEM ───────────────────────────
+  { cat:'ecom', simp:'跨平台电商', trad:'跨平臺電商', pinyin:'kuà píngtái diànshāng', en:'Cross-platform E-commerce', note:'kuà = across; 平台 = platform' },
+  { cat:'product', simp:'默认参数', trad:'默認參數', pinyin:'mòrèn cānshù', en:'Default Parameters', note:'默认 = default; 参数 = parameter' },
+  { cat:'product', simp:'计算报告', trad:'計算報告', pinyin:'jìsuàn bàogào', en:'Calculation Report', note:'计算 = calculate; 报告 = report' },
+  { cat:'product', simp:'数据基础', trad:'數據基礎', pinyin:'shùjù jīchǔ', en:'Data Foundation / Data Basis', note:'' },
+  { cat:'ecom', simp:'平销期', trad:'平銷期', pinyin:'pínxiāo qī', en:'Normal Sales Period / Non-peak Period', note:'Opposite of 大促; regular non-promo window' },
+  { cat:'adtech', simp:'真实点击与转化数据', trad:'真實點擊與轉化數據', pinyin:'zhēnshí diǎnjī yǔ zhuǎnhuà shùjù', en:'Real Click and Conversion Data', note:'真实 = real/actual; zh- retroflexes throughout' },
+  { cat:'adtech', simp:'核心原则', trad:'核心原則', pinyin:'héxīn yuánzé', en:'Core Principles', note:'' },
+  { cat:'adtech', simp:'防爆雷', trad:'防爆雷', pinyin:'fáng bào léi', en:'Prevent Catastrophic Bid Blowup', note:'Vivid slang — "prevent the bomb from exploding"' },
+  { cat:'adtech', simp:'保起量', trad:'保起量', pinyin:'bǎo qǐliàng', en:'Ensure Volume Ramp-up / Preserve Scaling', note:'起量 = gain volume / start scaling' },
+  { cat:'adtech', simp:'强制出价底线', trad:'強制出價底線', pinyin:'qiángzhì chūjià dǐxiàn', en:'Mandatory Minimum Bid Floor', note:'强制 = mandatory; 底线 = floor/lower bound' },
+  { cat:'product', simp:'业务逻辑', trad:'業務邏輯', pinyin:'yèwù luójí', en:'Business Logic', note:'Core engineering/PM term' },
+  { cat:'adtech', simp:'大盘', trad:'大盤', pinyin:'dàpán', en:'Overall Market / Aggregate Data Pool', note:'Lit: "big plate/board" — macro view of market' },
+  { cat:'adtech', simp:'兜底', trad:'兜底', pinyin:'dōudǐ', en:'Backstop / Safeguard / Fallback', note:'Lit: "catch the bottom" — safety net mechanism' },
+  { cat:'product', simp:'防违规机制', trad:'防違規機制', pinyin:'fáng wéiguī jīzhì', en:'Compliance-protection Mechanism', note:'违规 = violation/non-compliance' },
+  { cat:'ecom', simp:'出单', trad:'出單', pinyin:'chū dān', en:'Generate an Order / Get an Order', note:'Common ops/ecom term' },
+  { cat:'adtech', simp:'一刀切断', trad:'一刀切斷', pinyin:'yī dāo qiēduàn', en:'Hard Cutoff / Cut Off in One Stroke', note:'Idiom: blunt, decisive termination of a rule/bid' },
+  { cat:'adtech', simp:'冷启动', trad:'冷啟動', pinyin:'lěng qǐdòng', en:'Cold Start', note:'Same meaning as English — new campaign with no data' },
+  { cat:'ecom', simp:'引流爆款', trad:'引流爆款', pinyin:'yǐnliú bàokuǎn', en:'Traffic-driving Bestseller', note:'引流 = drive traffic; 爆款 = breakout hit' },
+  { cat:'adtech', simp:'废词', trad:'廢詞', pinyin:'fèicí', en:'Useless Keyword / Junk Keyword', note:'Keywords that burn budget with no conversion' },
+  { cat:'adtech', simp:'计划日预算下限', trad:'計劃日預算下限', pinyin:'jìhuà rì yùsuàn xiàxiàn', en:'Campaign Daily Budget Floor', note:'下限 = lower limit/floor' },
+  { cat:'product', simp:'访问', trad:'訪問', pinyin:'fǎngwèn', en:'Access / Call (an API)', note:'e.g. 访问API = call/access the API' },
+  { cat:'agile', simp:'角色', trad:'角色', pinyin:'juésè', en:'Role (Operation Role / User Role)', note:'2nd tone + 4th tone — juésè' },
+
+  // ── CORRESPONDENCE / BUSINESS ETIQUETTE ────────────────────
+  { cat:'comms', simp:'新入职', trad:'新入職', pinyin:'xīn rùzhí', en:'Newly onboarded / New joiner', note:'More professional than just 新 (new). Use when introducing yourself.' },
+  { cat:'comms', simp:'听取', trad:'聽取', pinyin:'tīngqǔ', en:'To listen to / solicit (feedback)', note:'Formal. 听取高见 = solicit your valued opinion.' },
+  { cat:'comms', simp:'高见', trad:'高見', pinyin:'gāojiàn', en:'Your valued insights / opinions', note:'Honorific — positions recipient as an expert. Builds 关系.' },
+  { cat:'comms', simp:'届时', trad:'屆時', pinyin:'jièshí', en:'At that time / when the time comes', note:'Professional alternative to 那个时候. Use in scheduling emails.' },
+  { cat:'comms', simp:'占用', trad:'佔用', pinyin:'zhànyòng', en:'To take up / occupy (someone\'s time)', note:'Polite framing when asking for time: 占用一点时间.' },
+  { cat:'comms', simp:'见谅', trad:'見諒', pinyin:'jiànliàng', en:'Please excuse / forgive', note:'High-level apology for language gaps. See buffer intro pattern.' },
+  { cat:'comms', simp:'包涵', trad:'包涵', pinyin:'bāohán', en:'To bear with / be tolerant', note:'Warmer than 见谅 — requests patience. Use with close colleagues.' },
+  { cat:'comms', simp:'同步', trad:'同步', pinyin:'tóngbù', en:'To sync / align / walk through', note:'Standard tech term. 跟你同步一下 = let me walk you through this.' },
+  { cat:'comms', simp:'您好', trad:'您好', pinyin:'nín hǎo', en:'Hello (formal/respectful)', note:'Use 您 (nín) not 你 (nǐ) for first contact with Mainland stakeholders.' },
+  { cat:'comms', simp:'如有不当', trad:'如有不當', pinyin:'rú yǒu bùdàng', en:'If anything is inappropriate / off', note:'From the buffer intro: 如有表达不当之处，还请见谅.' },
+
+  // ── TECH & ECOM EXTENDED ───────────────────────────────────
+  { cat:'product', simp:'侧面', trad:'側面', pinyin:'cèmiàn', en:'Side / angle / dimension / indirect signal', note:'Tech: 侧面数据 = proxy/indirect signal data. 从侧面反映 = indirectly reflects.' },
+
+  // ── FROM REAL CONVERSATION (Teams, May 2026) ───────────────
+  { cat:'adtech', simp:'分时出价比例', trad:'分時出價比例', pinyin:'fēnshí chūjià bǐlì', en:'Dayparting bid ratio', note:'分时 = by time segment; 比例 = ratio. Evan used this when adjusting campaign bids by time of day.' },
+  { cat:'adtech', simp:'撞线', trad:'撞線', pinyin:'zhuàngxiàn', en:'Hit the budget ceiling / budget capped', note:'Lit: crash into the line. When daily budget is fully consumed. 5000日预算撞线 = ¥5k daily budget maxed out.' },
+  { cat:'adtech', simp:'调低', trad:'調低', pinyin:'tiáo dī', en:'Adjust down / reduce', note:'Opposite: 调高 (tiáo gāo) = adjust up. 调低出价比例 = lower the bid ratio.' },
+  { cat:'adtech', simp:'消耗', trad:'消耗', pinyin:'xiāohào', en:'To burn through / consume / deplete', note:'消耗预算 = burn budget. 消耗库存 = deplete inventory. 资源消耗 = resource consumption. 1st + 4th tone.' },
+  { cat:'product', simp:'接管', trad:'接管', pinyin:'jiēguǎn', en:'To take over / assume control / inherit ownership', note:'PM context: 接管项目 = take over a project. 接管团队 = take over a team. 接 (jiē, 1st) = receive/hand off; 管 (guǎn, 3rd) = manage.' },
+  { cat:'adtech', simp:'人群', trad:'人群', pinyin:'rénqún', en:'Audience / audience segment', note:'Core AdTech term. Lit: crowd/group. 2nd + 2nd tone — both rising.' },
+  { cat:'adtech', simp:'目标人群', trad:'目標人群', pinyin:'mùbiāo rénqún', en:'Target audience', note:'Most common compound. 目标 = target/goal.' },
+  { cat:'adtech', simp:'人群定向', trad:'人群定向', pinyin:'rénqún dìngxiàng', en:'Audience targeting', note:'定向 = targeting/directional. 人群定向设置 = audience targeting settings.' },
+  { cat:'adtech', simp:'核心人群', trad:'核心人群', pinyin:'héxīn rénqún', en:'Core audience', note:'Your highest-value segment. Opposite end: 潜在人群 = prospecting audience.' },
+  { cat:'adtech', simp:'潜在人群', trad:'潛在人群', pinyin:'qiánzài rénqún', en:'Potential / prospecting audience', note:'潜在 = latent/potential. New users not yet converted.' },
+  { cat:'product', simp:'验证', trad:'驗證', pinyin:'yànzhèng', en:'Validation / verify / validate', note:'Mio used this: 做一些验证 = do some validation. Common in UX and testing contexts.' },
+  { cat:'product', simp:'设计进展', trad:'設計進展', pinyin:'shèjì jìnzhǎn', en:'Design progress', note:'进展 = progress. 展示一下目前的设计进展 = walk you through the current design progress.' },
+];
+
+// Pronunciation phrases (with accent tips)
+const phrases = {
+  product: [
+    { simp:'这个功能的需求是什么？', trad:'這個功能的需求是什麼？', pinyin:'Zhège gōngnéng de xūqiú shì shénme?', en:'What are the requirements for this feature?', note:'Watch zh- in 这' },
+    { simp:'我们需要对齐一下优先级。', trad:'我們需要對齊一下優先級。', pinyin:'Wǒmen xūyào duìqí yīxià yōuxiānjí.', en:"Let's align on the priorities.", note:'Tone 3 sandhi: 一下' },
+    { simp:'上线时间排期是什么？', trad:'上線時間排期是什麼？', pinyin:'Shàngxiàn shíjiān páiqī shì shénme?', en:"What's the go-live schedule?", note:'sh- sh- practice' },
+    { simp:'需求评审通过了吗？', trad:'需求評審通過了嗎？', pinyin:'Xūqiú píngshěn tōngguò le ma?', en:'Did the requirements review pass?', note:'' },
+  ],
+  adtech: [
+    { simp:'这个关键词的竞价是多少？', trad:'這個關鍵詞的競價是多少？', pinyin:'Zhège guānjiàncí de jìngjià shì duōshao?', en:'What is the bid for this keyword?', note:'' },
+    { simp:'点击率和转化率都下降了。', trad:'點擊率和轉化率都下降了。', pinyin:'Diǎnjīlǜ hé zhuǎnhuàlǜ dōu xiàjiàng le.', en:'Both CTR and CVR have dropped.', note:'zh- in 转 — retroflex' },
+    { simp:'我们需要优化投放策略。', trad:'我們需要優化投放策略。', pinyin:'Wǒmen xūyào yōuhuà tóufàng cèlüè.', en:'We need to optimize the delivery strategy.', note:'' },
+    { simp:'数据透明度报告什么时候出？', trad:'數據透明度報告什麼時候出？', pinyin:'Shùjù tòumíngdù bàogào shénme shíhou chū?', en:'When will the data transparency report be out?', note:'sh- sound x3' },
+  ],
+  ecom: [
+    { simp:'天猫大促期间流量会翻倍。', trad:'天貓大促期間流量會翻倍。', pinyin:'Tiānmāo dàcù qījiān liúliàng huì fānbèi.', en:'Traffic doubles during Tmall major sale events.', note:'' },
+    { simp:'这个品牌的搜索排名怎么样？', trad:'這個品牌的搜索排名怎麼樣？', pinyin:'Zhège pǐnpái de sōusuǒ páimíng zěnmeyàng?', en:"How is this brand's search ranking?", note:'s- vs sh- in 搜索' },
+    { simp:'爆款产品的复购率很高。', trad:'爆款產品的復購率很高。', pinyin:'Bàokuǎn chǎnpǐn de fùgòulǜ hěn gāo.', en:'Bestseller repurchase rate is high.', note:'3rd tone sandhi: 产品' },
+    { simp:'商家需要提前准备库存。', trad:'商家需要提前準備庫存。', pinyin:'Shāngjiā xūyào tíqián zhǔnbèi kùcún.', en:'Merchants need to prepare inventory in advance.', note:'sh- in 商家' },
+  ],
+  agile: [
+    { simp:'这个冲刺的故事点够吗？', trad:'這個衝刺的故事點夠嗎？', pinyin:'Zhège chōngcì de gùshì diǎn gòu ma?', en:'Are the story points enough for this sprint?', note:'ch- sound — retroflex' },
+    { simp:'明天早上有站会。', trad:'明天早上有站會。', pinyin:'Míngtiān zǎoshang yǒu zhànhuì.', en:"There's a standup tomorrow morning.", note:'zh- in 站' },
+    { simp:'这个功能有技术债需要处理。', trad:'這個功能有技術債需要處理。', pinyin:'Zhège gōngnéng yǒu jìshù zhài xūyào chǔlǐ.', en:'This feature has technical debt to address.', note:'ch- in 处理' },
+    { simp:'我们下周拉齐一下需求。', trad:'我們下週拉齊一下需求。', pinyin:'Wǒmen xià zhōu lāqí yīxià xūqiú.', en:"Let's sync on requirements next week.", note:'zh- in 周 — retroflex' },
+  ],
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let charMode = 'both'; // simp, trad, both
+let quizCat = 'all';
+let qType = 'cn2en'; // cn2en or en2cn
+let quizQueue = [];
+let quizIndex = 0;
+let score = { correct: 0, total: 0 };
+let answeredCurrent = false;
+let pinyinShown = false;
+
+// ============================================================
+// CHAR MODE
+// ============================================================
+function setCharMode(mode) {
+  charMode = mode;
+  ['simp','both','trad'].forEach(m => document.getElementById('char'+m.charAt(0).toUpperCase()+m.slice(1)).classList.remove('active'));
+  document.getElementById('char'+mode.charAt(0).toUpperCase()+mode.slice(1)).classList.add('active');
+  renderCurrentCard();
+  renderRef();
+}
+
+function getDisplaySimpTrad(item) {
+  if (charMode === 'simp') return { main: item.simp, sub: '' };
+  if (charMode === 'trad') return { main: item.trad, sub: '' };
+  return { main: item.simp, sub: item.trad !== item.simp ? item.trad : '' };
+}
+
+// (switchTab defined later with addwords support)
+
+// ============================================================
+// QUIZ
+// ============================================================
+function setCat(cat, btn) {
+  quizCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  newQuiz();
+}
+
+function setQType(t) {
+  qType = t;
+  document.getElementById('qtype-cn2en').classList.toggle('active', t === 'cn2en');
+  document.getElementById('qtype-en2cn').classList.toggle('active', t === 'en2cn');
+  newQuiz();
+}
+
+// getFiltered defined later — includes custom words
+
+function shuffle(arr) {
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+function newQuiz() {
+  document.getElementById('resultScreen').classList.remove('show');
+  document.getElementById('quizMain').style.display = '';
+  score = { correct: 0, total: 0 };
+  updateScoreBadge();
+  let pool = getFiltered();
+  quizQueue = shuffle([...pool]).slice(0, Math.min(10, pool.length));
+  quizIndex = 0;
+  answeredCurrent = false;
+  pinyinShown = false;
+  renderCurrentCard();
+}
+
+function renderCurrentCard() {
+  if (quizIndex >= quizQueue.length) {
+    showResult();
+    return;
+  }
+  const item = quizQueue[quizIndex];
+  answeredCurrent = false;
+  pinyinShown = false;
+
+  updateProgressBar();
+  hideFeedback();
+
+  const catColors = { product: 'cat-product', adtech: 'cat-adtech', ecom: 'cat-ecom', agile: 'cat-agile', comms: 'cat-comms' };
+  const catNames = { product: '📋 Product', adtech: '📊 AdTech', ecom: '🛒 Ecommerce', agile: '🔄 Agile', comms: '✉️ Correspondence' };
+  document.getElementById('quizCatLabel').className = 'quiz-category-label ' + catColors[item.cat];
+  document.getElementById('quizCatLabel').textContent = catNames[item.cat];
+
+  const { main, sub } = getDisplaySimpTrad(item);
+
+  if (qType === 'cn2en') {
+    document.getElementById('quizModeLabel').textContent = '中 → EN';
+    document.getElementById('quizHanzi').textContent = main;
+    document.getElementById('quizHanziTrad').textContent = charMode === 'both' ? sub : '';
+    document.getElementById('quizPinyin').textContent = item.pinyin;
+    document.getElementById('quizPinyin').classList.remove('shown');
+    document.getElementById('pinyinBtn').style.display = '';
+    document.getElementById('pinyinBtn').textContent = 'Show pinyin';
+
+    const distractors = shuffle(vocab.filter(v => v !== item)).slice(0, 3);
+    const options = shuffle([item, ...distractors]);
+    renderOptions(options, item, 'en');
+  } else {
+    document.getElementById('quizModeLabel').textContent = 'EN → 中';
+    document.getElementById('quizHanzi').style.display = 'none';
+    const englishDiv = document.getElementById('quizHanzi');
+    englishDiv.style.display = '';
+
+    // Show English in the hanzi slot
+    document.getElementById('quizHanzi').textContent = item.en;
+    document.getElementById('quizHanzi').style.fontSize = '22px';
+    document.getElementById('quizHanzi').style.letterSpacing = '0';
+    document.getElementById('quizHanziTrad').textContent = item.note ? '💡 ' + item.note : '';
+    document.getElementById('quizPinyin').classList.remove('shown');
+    document.getElementById('pinyinBtn').style.display = 'none';
+
+    const distractors = shuffle(vocab.filter(v => v !== item)).slice(0, 3);
+    const options = shuffle([item, ...distractors]);
+    renderOptions(options, item, 'cn');
+  }
+
+  // Restore hanzi font size if needed
+  if (qType === 'cn2en') {
+    document.getElementById('quizHanzi').style.fontSize = '';
+    document.getElementById('quizHanzi').style.letterSpacing = '';
+  }
+}
+
+function renderOptions(options, correct, mode) {
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    if (mode === 'en') {
+      btn.textContent = opt.en;
+    } else {
+      const { main, sub } = getDisplaySimpTrad(opt);
+      btn.innerHTML = `<span class="option-hanzi">${main}</span><span class="option-pinyin">${opt.pinyin}</span>`;
+    }
+    btn.onclick = () => checkAnswer(btn, opt, correct, options, mode);
+    grid.appendChild(btn);
+  });
+}
+
+function checkAnswer(btn, chosen, correct, allOptions, mode) {
+  if (answeredCurrent) return;
+  answeredCurrent = true;
+  score.total++;
+
+  const isCorrect = chosen === correct;
+  if (isCorrect) {
+    score.correct++;
+    btn.classList.add('correct');
+    showFeedback(true, '✓ Correct! ' + (correct.note ? '· ' + correct.note : ''));
+  } else {
+    btn.classList.add('wrong');
+    showFeedback(false, '✗ Incorrect — correct answer: ' + (mode === 'en' ? correct.en : correct.simp + ' · ' + correct.pinyin));
+    // Highlight correct
+    document.querySelectorAll('.option-btn').forEach((b, i) => {
+      if (allOptions[i] === correct) b.classList.add('correct');
+    });
+  }
+
+  // Disable all
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  // Show pinyin
+  document.getElementById('quizPinyin').classList.add('shown');
+  updateScoreBadge();
+
+  // Auto-advance after 1.8s
+  setTimeout(() => {
+    if (answeredCurrent) {
+      quizIndex++;
+      renderCurrentCard();
+    }
+  }, 1800);
+}
+
+function skipQuestion() {
+  quizIndex++;
+  renderCurrentCard();
+}
+
+function togglePinyin() {
+  pinyinShown = !pinyinShown;
+  document.getElementById('quizPinyin').classList.toggle('shown', pinyinShown);
+  document.getElementById('pinyinBtn').textContent = pinyinShown ? 'Hide pinyin' : 'Show pinyin';
+}
+
+function showFeedback(correct, msg) {
+  const banner = document.getElementById('feedbackBanner');
+  banner.textContent = msg;
+  banner.className = 'feedback-banner ' + (correct ? 'correct-fb' : 'wrong-fb');
+  banner.style.display = '';
+}
+function hideFeedback() {
+  document.getElementById('feedbackBanner').style.display = 'none';
+}
+
+function updateProgressBar() {
+  const total = quizQueue.length;
+  const pct = total > 0 ? (quizIndex / total) * 100 : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = quizIndex + ' / ' + total;
+}
+
+function updateScoreBadge() {
+  document.getElementById('scoreBadge').textContent = `Score: ${score.correct}/${score.total}`;
+}
+
+function showResult() {
+  document.getElementById('quizMain').style.display = 'none';
+  const rs = document.getElementById('resultScreen');
+  rs.classList.add('show');
+  const pct = score.total > 0 ? score.correct / score.total : 0;
+  const emoji = pct === 1 ? '🏆' : pct >= 0.8 ? '🎉' : pct >= 0.6 ? '💪' : '📖';
+  const label = pct === 1 ? 'Perfect score!' : pct >= 0.8 ? 'Great work!' : pct >= 0.6 ? 'Keep going!' : 'Keep practicing!';
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = score.correct + '/' + score.total;
+  document.getElementById('resultLabel').textContent = label;
+  document.getElementById('resCorrect').textContent = score.correct;
+  document.getElementById('resWrong').textContent = score.total - score.correct;
+  document.getElementById('resTotal').textContent = score.total;
+}
+
+function reviewMissed() {
+  // Restart with all items
+  newQuiz();
+}
+
+// ============================================================
+// PRONUNCIATION
+// ============================================================
+let currentUtterance = null;
+
+function speakText(text, rowEl) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  if (currentUtterance && rowEl) {
+    document.querySelectorAll('.phrase-row').forEach(r => r.classList.remove('playing'));
+  }
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-CN';
+  utter.rate = 0.85;
+  utter.pitch = 1.0;
+
+  // Try to find a Chinese voice
+  const voices = window.speechSynthesis.getVoices();
+  const zhVoice = voices.find(v => v.lang.startsWith('zh')) || voices.find(v => v.lang.includes('zh'));
+  if (zhVoice) utter.voice = zhVoice;
+
+  if (rowEl) {
+    rowEl.classList.add('playing');
+    utter.onend = () => rowEl.classList.remove('playing');
+    utter.onerror = () => rowEl.classList.remove('playing');
+  }
+  currentUtterance = utter;
+  window.speechSynthesis.speak(utter);
+}
+
+function buildPhraseRows(catId, items) {
+  const container = document.getElementById('phrases-' + catId);
+  if (!container) return;
+  container.innerHTML = '';
+  items.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'phrase-row';
+    const tradDisplay = p.trad !== p.simp ? p.trad : '';
+    row.innerHTML = `
+      <div class="play-btn" onclick="speakText('${p.simp.replace(/'/g, "\\'")}', this.closest('.phrase-row'))">▶</div>
+      <div class="phrase-chinese">
+        <div class="phrase-simp">${charMode !== 'trad' ? p.simp : p.trad}</div>
+        ${charMode === 'both' && tradDisplay ? `<div class="phrase-trad">${tradDisplay}</div>` : ''}
+      </div>
+      <div class="phrase-details">
+        <div class="phrase-pinyin-text">${p.pinyin}</div>
+        <div class="phrase-english">${p.en}</div>
+      </div>
+      ${p.note ? `<div class="phrase-note">⚠️ ${p.note}</div>` : ''}
+    `;
+    container.appendChild(row);
+  });
+}
+
+function renderAllPhrases() {
+  Object.keys(phrases).forEach(cat => buildPhraseRows(cat, phrases[cat]));
+}
+
+// ============================================================
+// REFERENCE TABLE
+// ============================================================
+function renderRef(filter) {
+  const tbody = document.getElementById('refTableBody');
+  const f = filter ? filter.toLowerCase() : '';
+  const catColors = { product: '#1a2a4a', adtech: '#2a1a3a', ecom: '#1a2e2a', agile: '#2e2a1a', comms: '#1e2a2e' };
+  const catTextColors = { product: '#6c8ef7', adtech: '#a78bfa', ecom: '#34d399', agile: '#fbbf24', comms: '#22d3ee' };
+  const catNames = { product: '📋 Product', adtech: '📊 AdTech', ecom: '🛒 Ecom', agile: '🔄 Agile', comms: '✉️ Comms' };
+
+  const filtered = vocab.filter(v => {
+    if (!f) return true;
+    return v.simp.includes(f) || v.trad.includes(f) || v.pinyin.toLowerCase().includes(f) || v.en.toLowerCase().includes(f);
+  });
+
+  tbody.innerHTML = filtered.map(v => {
+    const { main, sub } = getDisplaySimpTrad(v);
+    return `<tr>
+      <td>
+        <div class="ref-simp">${main}</div>
+        ${sub ? `<div class="ref-trad">${sub}</div>` : ''}
+      </td>
+      <td><div class="ref-pinyin">${v.pinyin}</div></td>
+      <td>
+        <div class="ref-english">${v.en}</div>
+        ${v.note ? `<div class="ref-note">💡 ${v.note}</div>` : ''}
+      </td>
+      <td><span class="cat-badge" style="background:${catColors[v.cat]};color:${catTextColors[v.cat]}">${catNames[v.cat]}</span></td>
+      <td><button class="ref-play" onclick="speakText('${v.simp.replace(/'/g, "\\'")}')">▶</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterRef() {
+  renderRef(document.getElementById('refSearch').value);
+}
+
+// ============================================================
+// TTS CHECK
+// ============================================================
+function checkTTS() {
+  if (!window.speechSynthesis) {
+    document.getElementById('noTtsNotice').style.display = '';
+    return;
+  }
+  // Wait for voices to load
+  const tryCheck = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const hasZh = voices.some(v => v.lang.startsWith('zh') || v.lang.includes('zh'));
+    if (!hasZh && voices.length > 0) {
+      document.getElementById('noTtsNotice').style.display = '';
+    }
+  };
+  if (window.speechSynthesis.getVoices().length > 0) tryCheck();
+  window.speechSynthesis.onvoiceschanged = tryCheck;
+}
+
+// ============================================================
+// READING DATA
+// ============================================================
+// Token format: [hanzi, pinyin, english, optional_note]
+// Punctuation: use string starting with "·" e.g. "·：" "·，" "·。"
+// Paragraph break: "¶"
+
+const readings = [
+  {
+    id: 'prd-keyword',
+    title: '关键词收割功能需求',
+    titleEn: 'Keyword Harvesting — Feature Requirements',
+    level: 'B2',
+    cat: 'product',
+    translation: `<p><strong>Keyword Harvesting Feature Requirement (v1.2)</strong><br>
+This feature requirement document defines the scope for the keyword harvesting function. The system must automatically collect high-conversion-rate keywords based on historical data and optimize bidding strategies accordingly.<br><br>
+The Product Manager must confirm the acceptance criteria and the go-live schedule. Priority: High. Estimated iteration cycle: two weeks.<br><br>
+<strong>Functional Requirements:</strong><br>
+1. The system collects keywords every 24 hours and generates a recommendation list.<br>
+2. Junk (waste) keywords are automatically filtered out to avoid budget burn.<br>
+3. The data transparency report is updated daily. Engineering review must pass before go-live.</p>`,
+    notes: [
+      { zh: '需根据…', note: '<code>需根据</code> = "must/needs to be based on" — 根据 (gēnjù) is a preposition meaning "based on / according to". Very common in PRD language.' },
+      { zh: '并优化', note: '<code>并</code> (bìng) here means "and also / furthermore" — it connects two verbs. More formal than 和 (hé).' },
+      { zh: '以免浪费预算', note: '<code>以免</code> (yǐmiǎn) = "in order to avoid / so as to prevent". Critical PRD phrase — signals a risk being mitigated.' },
+    ],
+    paras: [
+      [
+        ['关键词','guānjiàncí','Keyword','Core AdTech term'],['收割','shōugē','Harvesting','Lit: to harvest crops'],['功能','gōngnéng','Feature / Function',''],['需求','xūqiú','Requirement',''],['·（'],['v','v','version',''],['·1.2）'],
+      ],
+      [
+        ['本','běn','This (current)','Formal written Chinese opener'],['功能','gōngnéng','Feature',''],['需求','xūqiú','requirement',''],['文档','wéndàng','document',''],['定义','dìngyì','defines',''],['关键词','guānjiàncí','keyword',''],['收割','shōugē','harvesting',''],['功能','gōngnéng','feature',''],['的','de','(possessive/modifier particle)',''],['范围','fànwéi','scope',''],['·。'],
+        ['系统','xìtǒng','System',''],['需','xū','must / needs to','Formal written; more concise than 需要'],['根据','gēnjù','based on / according to','Preposition — very common in PRDs'],['历史','lìshǐ','historical',''],['数据','shùjù','data',''],['·，'],
+        ['自动','zìdòng','automatically',''],['采集','cǎijí','collect / harvest','More specific than 收集; used for data collection'],['高转化率','gāo zhuǎnhuàlǜ','high-conversion-rate',''],['关键词','guānjiàncí','keywords',''],['·，'],
+        ['并','bìng','and also / furthermore','Formal conjunction linking two verbs'],['优化','yōuhuà','optimize',''],['竞价','jìngjià','bidding',''],['策略','cèlüè','strategy',''],['·。'],
+      ],
+      [
+        ['产品经理','chǎnpǐn jīnglǐ','Product Manager','All 4 chars get full tone in formal speech'],['需','xū','must',''],['确认','quèrèn','confirm',''],['验收标准','yànshōu biāozhǔn','acceptance criteria','Key PRD term — know this cold'],['与','yǔ','and','Formal written; more formal than 和'],['上线','shàngxiàn','go-live / launch',''],['排期','páiqī','schedule / timeline','Common Mainland PM-speak'],['·。'],
+        ['优先级','yōuxiānjí','Priority',''],['·：'],['高','gāo','High',''],['·。'],
+        ['预计','yùjì','Estimated / expected',''],['迭代','diédài','iteration',''],['周期','zhōuqī','cycle',''],['·：'],['两周','liǎng zhōu','Two weeks',''],['·。'],
+      ],
+      [
+        ['功能','gōngnéng','Functional',''],['需求','xūqiú','requirements',''],['·：'],
+        ['·1.'],['系统','xìtǒng','System',''],['每','měi','every',''],['24','','',''],['小时','xiǎoshí','hours',''],['采集','cǎijí','collects',''],['关键词','guānjiàncí','keywords',''],['·，'],['生成','shēngchéng','generates',''],['推荐','tuījiàn','recommendation',''],['列表','lièbiǎo','list',''],['·。'],
+        ['·2.'],['废词','fèicí','Junk keywords','Lit: waste words — keywords burning budget without converting'],['自动','zìdòng','automatically',''],['过滤','guòlǜ','filtered out',''],['·，'],['以免','yǐmiǎn','in order to avoid','Critical PRD phrase — signals risk mitigation'],['浪费','làngfèi','wasting',''],['预算','yùsuàn','budget',''],['·。'],
+        ['·3.'],['数据透明度','shùjù tòumíngdù','Data transparency','Your Transparency Logs feature'],['报告','bàogào','report',''],['每日','měirì','daily',''],['更新','gēngxīn','updated',''],['·，'],['工程师','gōngchéngshī','engineering',''],['评审通过','píngshěn tōngguò','review passed',''],['后','hòu','after / before going',''],['方可','fāng kě','only then can / must first','Formal written — "only then may..."'],['上线','shàngxiàn','go live',''],['·。'],
+      ],
+    ],
+  },
+
+  {
+    id: 'adtech-coldstart',
+    title: '冷启动阶段竞价策略',
+    titleEn: 'Cold Start Phase — Bidding Strategy',
+    level: 'C1',
+    cat: 'adtech',
+    translation: `<p><strong>Cold Start Phase — Bidding Logic (Predict Internal Note)</strong><br>
+In the early stage of a new campaign going live, the system lacks historical data support and is prone to problems of bid blowup (防爆雷) or volume ramp-up imbalance (保起量失衡).<br><br>
+Recommendation: set a mandatory minimum bid floor to prevent junk keywords from burning the budget. A hard cutoff (一刀切断) on bids below the floor must be enabled from day one.<br><br>
+Overall market (大盘) data needs a daily debrief. The backstop mechanism (兜底) is already enabled — campaign daily budget floor is set at ¥500. Ensure ROI targets are met. If the cold start period exceeds 7 days without volume ramp-up, escalate to the PM for strategy review.</p>`,
+    notes: [
+      { zh: '容易出现…的问题', note: '<code>容易出现…的问题</code> = "prone to the problem of…" — a very common written pattern in technical docs. 容易 (róngyì) = easy/prone to.' },
+      { zh: '建议设置', note: '<code>建议</code> (jiànyì) = "recommend / it is recommended that". In PRD/strategy docs, this signals a non-mandatory best practice vs 必须 (bìxū) = must.' },
+      { zh: '若…超过…则', note: '<code>若…则…</code> = "if…then…" — classical conditional structure. More formal than 如果…就… in written docs.' },
+    ],
+    paras: [
+      [
+        ['冷启动','lěng qǐdòng','Cold Start','Same as English — new campaign with no historical data'],['阶段','jiēduàn','phase / stage',''],['·，'],['新','xīn','new',''],['计划','jìhuà','campaign / plan','AdTech: 计划 = campaign'],['上线','shàngxiàn','go live',''],['初期','chūqī','early stage',''],['·，'],
+        ['系统','xìtǒng','system',''],['缺乏','quēfá','lacks',''],['历史','lìshǐ','historical',''],['数据','shùjù','data',''],['支撑','zhīchēng','support / backing',''],['·，'],
+        ['容易','róngyì','prone to','Lit: "easy to" — signals a risk'],['出现','chūxiàn','occur / appear',''],['防爆雷','fáng bào léi','bid blowup prevention failure','When the protection fails and bids explode'],['或','huò','or',''],['保起量','bǎo qǐliàng','volume ramp-up','Ensuring the campaign scales'],['失衡','shīhéng','imbalance / failure',''],['的','de','(modifier)',''],['问题','wèntí','problem',''],['·。'],
+      ],
+      [
+        ['建议','jiànyì','Recommend','Signals best practice, not mandatory'],['设置','shèzhì','set / configure',''],['强制','qiángzhì','mandatory / forced',''],['出价','chūjià','bid',''],['底线','dǐxiàn','floor / lower bound',''],['·，'],
+        ['防止','fángzhǐ','prevent',''],['废词','fèicí','junk keywords',''],['消耗','xiāohào','burn / consume',''],['预算','yùsuàn','budget',''],['·。'],
+        ['出价','chūjià','bid',''],['低于','dīyú','below',''],['底线','dǐxiàn','floor',''],['的','de','(modifier)',''],['一刀切断','yī dāo qiēduàn','hard cutoff','Lit: cut with one stroke — decisive'],['机制','jīzhì','mechanism',''],['须','xū','must','Very formal written — stronger than 需'],['从','cóng','from',''],['上线','shàngxiàn','go-live',''],['第一天','dì yī tiān','day one',''],['启用','qǐyòng','activated / enabled',''],['·。'],
+      ],
+      [
+        ['大盘','dàpán','Overall market / aggregate data','Lit: big plate — macro view'],['数据','shùjù','data',''],['需','xū','needs to',''],['每日','měirì','daily',''],['复盘','fùpán','debrief / review','Lit: replay the board game'],['·。'],
+        ['兜底','dōudǐ','Backstop / safeguard','Lit: catch the bottom'],['机制','jīzhì','mechanism',''],['已','yǐ','already','Written formal particle'],['启用','qǐyòng','enabled',''],['·——'],
+        ['计划','jìhuà','campaign',''],['日','rì','daily','Formal; 每日 in running text, 日 in specs'],['预算','yùsuàn','budget',''],['下限','xiàxiàn','floor / lower limit','下限 = lower bound; 上限 = upper bound'],['设为','shè wéi','set at / configured to',''],['·￥500，'],
+        ['确保','quèbǎo','ensure',''],['投资回报率','tóuzī huíbào lǜ','ROI',''],['达标','dábiāo','meet the target','Lit: reach the standard — very common business term'],['·。'],
+      ],
+      [
+        ['若','ruò','If (formal)','Classical conditional — more formal than 如果'],['冷启动','lěng qǐdòng','cold start',''],['周期','zhōuqī','period / cycle',''],['超过','chāoguò','exceeds',''],['·7天'],['仍','réng','still',''],['未能','wèinéng','unable to / fails to',''],['保起量','bǎo qǐliàng','ramp up volume',''],['·，'],
+        ['则','zé','then (formal)','Pairs with 若 in written conditionals'],['需','xū','needs to',''],['升级','shēngjí','escalate',''],['至','zhì','to','Formal written preposition'],['产品经理','chǎnpǐn jīnglǐ','Product Manager',''],['进行','jìnxíng','conduct / carry out','Common written verb — "proceed to"],['策略','cèlüè','strategy',''],['复盘','fùpán','review / debrief',''],['·。'],
+      ],
+    ],
+  },
+
+  {
+    id: 'standup-slack',
+    title: '每日站会纪要（Slack 消息）',
+    titleEn: 'Daily Standup Notes — Slack-style message',
+    level: 'B2',
+    cat: 'agile',
+    translation: `<p><strong>Daily Standup Summary — Team Ruyi (Sprint 4, Day 3)</strong><br><br>
+Frontend: API interface alignment complete ✅<br>
+Backend: test case pass rate 90%, 2 edge cases under review.<br>
+Remaining story points this sprint: 8 points.<br><br>
+<strong>Blocker:</strong> Data foundation API not yet ready. Expected to land tomorrow (May 7). Relevant engineers please attend tomorrow's requirements change review.<br><br>
+<strong>Note:</strong> Next sprint planning is Wednesday. PM to confirm story point estimates before the meeting.</p>`,
+    notes: [
+      { zh: '已完成 / 待确认', note: '<code>已</code> = "already" (formal). <code>待</code> = "pending / awaiting". Both are very common in written Slack/PRD status updates — short and punchy.' },
+      { zh: '预计明日落地', note: '<code>落地</code> (luòdì) literally means "land on the ground" — in business Chinese it means "to be implemented / to go live". Very common idiom.' },
+      { zh: '请相关工程师参与', note: '<code>请…参与</code> = "please [someone] participate/attend". Polite written request. <code>相关</code> (xiāngguān) = "relevant / related" — standard qualifier in team comms.' },
+    ],
+    paras: [
+      [
+        ['每日','měirì','Daily',''],['站会','zhànhuì','standup','Lit: standing meeting'],['纪要','jìyào','summary / minutes',''],['·——'],
+        ['团队','tuánduì','Team',''],['·Ruyi，'],['冲刺','chōngcì','Sprint',''],['·4，'],['第','dì','Day (ordinal)',''],['·3天'],
+      ],
+      [
+        ['前端','qiánduan','Frontend',''],['·：'],['接口','jiēkǒu','API interface',''],['对齐','duìqí','alignment',''],['已完成','yǐ wánchéng','already complete','已 = already; very common status marker'],['·✅'],['·。'],
+        ['后端','hòuduān','Backend',''],['·：'],['测试用例','cèshì yònglì','test cases',''],['通过率','tōngguòlǜ','pass rate',''],['·90%，'],['·2个'],['边界情况','biānjiè qíngkuàng','edge cases',''],['待确认','dài quèrèn','pending confirmation','待 = awaiting — compact status word'],['·。'],
+      ],
+      [
+        ['本','běn','this (current)','Formal written determiner'],['冲刺','chōngcì','sprint',''],['剩余','shèngyú','remaining',''],['故事点','gùshì diǎn','story points',''],['·：8点。'],
+      ],
+      [
+        ['阻塞项','zǔsāi xiàng','Blocker',''],['·：'],
+        ['数据基础','shùjù jīchǔ','data foundation',''],['接口','jiēkǒu','API / interface',''],['尚未','shàngwèi','not yet','More emphatic than 还没'],['就绪','jiùxù','ready','Lit: in position'],['·，'],
+        ['预计','yùjì','expected / estimated',''],['明日','míngrì','tomorrow','Formal written; more formal than 明天'],['落地','luòdì','to be implemented','Lit: land — means feature goes live'],['·（'],['·5月7日），'],
+        ['请','qǐng','please','Polite written request'],['相关','xiāngguān','relevant / related','Standard qualifier in team comms'],['工程师','gōngchéngshī','engineers',''],['参与','cānyù','attend / participate',''],['明天','míngtiān','tomorrow',''],['需求变更','xūqiú biàngēng','requirements change',''],['评审','píngshěn','review',''],['·。'],
+      ],
+      [
+        ['备注','bèizhù','Note / remark',''],['·：'],
+        ['下个','xià ge','next',''],['冲刺','chōngcì','sprint',''],['计划','jìhuà','planning',''],['会议','huìyì','meeting',''],['定于','dìngyú','scheduled for','Written formal: 定于 = fixed at/for'],['周三','zhōusān','Wednesday',''],['·。'],
+        ['产品经理','chǎnpǐn jīnglǐ','PM',''],['请','qǐng','please',''],['在','zài','before','Preposition'],['会前','huì qián','before the meeting','会 = meeting; 前 = before'],['确认','quèrèn','confirm',''],['故事点','gùshì diǎn','story point',''],['估算','gūsuàn','estimates',''],['·。'],
+      ],
+    ],
+  },
+
+  {
+    id: 'tmall-promo',
+    title: '618 大促投放策略简报',
+    titleEn: '618 Sale Campaign — Delivery Strategy Brief',
+    level: 'C1',
+    cat: 'ecom',
+    translation: `<p><strong>618 Major Sale — Ad Delivery Strategy Brief (Tmall AdTech)</strong><br><br>
+During the 618 major sale event, brands must prepare traffic-driving bestsellers (引流爆款) in advance to ensure conversion during the normal sales period (平销期).<br><br>
+<strong>Priority category bidding strategy:</strong> On the premise that impression targets are met, prioritise volume ramp-up (保起量). The backstop mechanism is enabled — daily budget floor ¥1,000, to prevent a hard cutoff (一刀切断) of delivery midway through the event.<br><br>
+<strong>Data requirements:</strong> Real click and conversion data must be synchronised daily. The attribution model is set to last-click. Cold start campaigns must complete their ramp-up phase at least 7 days before the main sale day, otherwise the bidding strategy defaults to conservative mode.</p>`,
+    notes: [
+      { zh: '在…前提下', note: '<code>在…前提下</code> = "on the premise that / provided that". A very sophisticated conditional used in strategy docs — marks a dependency condition.' },
+      { zh: '以防', note: '<code>以防</code> (yǐfáng) = "to guard against / in case of". Similar to 以免 but implies proactive protection. Common in strategy docs.' },
+      { zh: '否则默认', note: '<code>否则</code> (fǒuzé) = "otherwise / if not". <code>默认</code> (mòrèn) = "default". Together: "otherwise defaults to…" — classic conditional fallback in technical specs.' },
+    ],
+    paras: [
+      [
+        ['·618'],['大促','dàcù','Major sale event','e.g. June 18 sales — Tmall/JD biggest event after 双十一'],['期间','qījiān','during',''],['·，'],
+        ['品牌','pǐnpái','brands',''],['须','xū','must','Formal written — stronger than 需要'],['提前','tíqián','in advance',''],['备好','bèi hǎo','prepare / stock up',''],['引流爆款','yǐnliú bàokuǎn','traffic-driving bestsellers','引流 = drive traffic; 爆款 = hit product'],['·，'],
+        ['确保','quèbǎo','ensure',''],['平销期','pínxiāo qī','normal sales period','Non-promotional window before/after 大促'],['流量','liúliàng','traffic',''],['转化','zhuǎnhuà','conversion',''],['·。'],
+      ],
+      [
+        ['重点','zhòngdiǎn','priority / key',''],['类目','lèimù','category',''],['出价','chūjià','bidding',''],['策略','cèlüè','strategy',''],['·：'],
+        ['在','zài','on / in (preposition)',''],['曝光量','bàoguāngliàng','impressions',''],['达标','dábiāo','meet the target','Lit: reach standard'],['的','de','(modifier)',''],['前提下','qiántí xià','on the premise that','Very sophisticated conditional'],['·，'],
+        ['优先','yōuxiān','prioritise',''],['保起量','bǎo qǐliàng','volume ramp-up',''],['·。'],
+        ['兜底','dōudǐ','Backstop',''],['机制','jīzhì','mechanism',''],['已启用','yǐ qǐyòng','already enabled','已 = already'],['·——'],
+        ['日预算','rì yùsuàn','daily budget',''],['下限','xiàxiàn','floor / lower limit',''],['·¥1,000，'],
+        ['以防','yǐfáng','to guard against','Proactive protection — stronger than 以免'],['投放','tóufàng','delivery',''],['被','bèi','(passive marker)','Marks passive voice in written Chinese'],['一刀切断','yī dāo qiēduàn','hard cutoff',''],['·。'],
+      ],
+      [
+        ['数据','shùjù','Data',''],['要求','yāoqiú','requirements',''],['·：'],
+        ['真实','zhēnshí','real / actual',''],['点击','diǎnjī','click',''],['与','yǔ','and','Formal'],['转化','zhuǎnhuà','conversion',''],['数据','shùjù','data',''],['须','xū','must',''],['每日','měirì','daily',''],['同步','tóngbù','synchronised',''],['·。'],
+        ['归因模型','guīyīn móxíng','attribution model',''],['设为','shè wéi','set to',''],['末次点击','mò cì diǎnjī','last-click',''],['·。'],
+      ],
+      [
+        ['冷启动','lěng qǐdòng','cold start',''],['计划','jìhuà','campaigns',''],['须','xū','must',''],['在','zài','before',''],['大促','dàcù','main sale day',''],['正式','zhèngshì','official / formal',''],['开始','kāishǐ','start',''],['前','qián','before',''],['至少','zhìshǎo','at least',''],['·7天'],
+        ['完成','wánchéng','complete',''],['起量','qǐliàng','volume ramp-up',''],['阶段','jiēduàn','phase',''],['·，'],
+        ['否则','fǒuzé','otherwise','Classic conditional fallback'],['竞价策略','jìngjià cèlüè','bidding strategy',''],['默认','mòrèn','defaults to',''],['切换','qiēhuàn','switch to / transition to',''],['保守模式','bǎoshǒu móshì','conservative mode',''],['·。'],
+      ],
+    ],
+  },
+];
+
+  {
+    id: 'intro-email',
+    title: '自我介绍邮件（缓冲式开场）',
+    titleEn: 'Self-introduction — The "Buffer" Opening',
+    level: 'B2',
+    cat: 'comms',
+    translation: `<p><strong>Self-introduction message — Rob, PM, James's team</strong><br><br>
+Hello Evan,<br><br>
+I'm Rob, the newly onboarded Product Manager on James's team. I'm from the US and am currently putting in effort to learn Chinese — if anything I express is inappropriate, please excuse me.<br><br>
+We're planning to visit the Guangzhou office next Tuesday. I wonder whether, when the time comes, we could take up a little of your time for a brief self-introduction?<br><br>
+I'd love to hear your valued insights on the Predict product. Looking forward to connecting with you then.</p>`,
+    notes: [
+      { zh: '如有表达不当之处，还请见谅', note: 'The "buffer" pattern. <code>如有…之处</code> = "if there is any [issue] in…". <code>还请</code> = "I still ask / please". Together it reads as gracious, not apologetic — growth mindset framing.' },
+      { zh: '不知届时能否', note: '<code>不知…能否</code> = "I wonder whether… could…" — a soft, indirect request. Much more polite than a direct ask. Essential for first-contact emails in mainland business culture.' },
+      { zh: '占用一点时间', note: '<code>占用</code> = "take up / occupy". Adding <code>一点</code> (a little) softens it further. The full phrase 占用一点时间 is a set phrase — memorise it whole.' },
+    ],
+    paras: [
+      [
+        ['Evan','','',''],['您好','nín hǎo','Hello (formal)','您 not 你 — essential for first contact with Mainland stakeholders'],['·，'],
+      ],
+      [
+        ['我','wǒ','I',''],['是','shì','am',''],['James','','',''],['团队','tuánduì','team',''],['新入职','xīn rùzhí','newly onboarded','More professional than just 新; signals official status'],['的','de','(modifier)',''],['产品经理','chǎnpǐn jīnglǐ','Product Manager',''],['Rob','','',''],['·。'],
+        ['我','wǒ','I',''],['来自','láizì','come from',''],['美国','Měiguó','the US','Lit: "beautiful country"'],['·，'],
+        ['目前','mùqián','currently','Formal; more precise than 现在'],['还在','hái zài','still / am in the process of',''],['努力','nǔlì','diligently / hard','Signals active effort — growth mindset word'],['学习','xuéxí','studying / learning',''],['中文','Zhōngwén','Chinese',''],['·，'],
+        ['如有','rú yǒu','if there is','Formal conditional — classical Chinese pattern'],['表达','biǎodá','expression',''],['不当','bùdàng','inappropriate / off',''],['之处','zhī chù','in [this area]','Classical: 之处 = "in the matter of"'],['·，'],
+        ['还请','hái qǐng','I ask that you please','Gracious, not apologetic — key tone shift'],['见谅','jiànliàng','excuse / forgive','High register apology for language gaps'],['·。'],
+      ],
+      [
+        ['我们','wǒmen','We',''],['下周二','xià zhōu èr','next Tuesday',''],['计划','jìhuà','plan to',''],['前往','qiánwǎng','travel to / head to','More formal than 去'],['广州','Guǎngzhōu','Guangzhou',''],['办公室','bàngōngshì','office',''],['·，'],
+        ['不知','bù zhī','I wonder / I don\'t know if','Indirect question opener — softens the ask'],['届时','jièshí','at that time / when the time comes','Professional alternative to 那个时候'],['能否','néng fǒu','whether… could','能否 = can or cannot — polished indirect ask'],['占用','zhànyòng','take up / occupy',''],['一点','yīdiǎn','a little','Softener — always add when asking for time'],['时间','shíjiān','time',''],
+        ['做个','zuò ge','do a brief','Casual particle — 做一个 shortened'],['自我介绍','zìwǒ jièshào','self-introduction','Standard professional phrase'],['·？'],
+      ],
+      [
+        ['也想','yě xiǎng','also would like to',''],['听取','tīngqǔ','hear / solicit','Formal; implies actively seeking input'],['您','nín','your (formal)','Always 您 not 你 with senior stakeholders'],['对','duì','on / regarding','Preposition'],['Predict','','',''],['产品','chǎnpǐn','product',''],['的','de','(modifier)',''],['高见','gāojiàn','valued insights','Honorific — positions Evan as the expert'],['·。'],
+        ['期待','qīdài','Looking forward to',''],['届时','jièshí','at that time',''],['与您','yǔ nín','connecting with you','Formal'],['同步','tóngbù','sync / connect','Lit: synchronise — used broadly in tech for any alignment conversation'],['·。'],
+      ],
+    ],
+  },
+
+  {
+    id: 'reply-prep',
+    title: '收件箱预判：Evan 的两种回复',
+    titleEn: 'Response Prep — Evan\'s "Yes" & "Reschedule" replies',
+    level: 'B2',
+    cat: 'comms',
+    translation: `<p><strong>Reply A — Confirmed ✅</strong><br>
+Hi Rob, thanks for reaching out! Great to meet you. We'll be in Guangzhou next Tuesday — I'd be very happy to arrange some time to meet with you then. Would 10am work? We can sync first in the meeting room and then take a look around the office. Looking forward to meeting face to face!<br><br>
+<strong>Reply B — Reschedule 🔄</strong><br>
+Hi Rob, thanks for your message — really looking forward to meeting you! Sorry, I've suddenly got a meeting clash next Tuesday. Would it be possible to move to Wednesday or Thursday instead? Please let me know what time works for you and I'll arrange it. Thanks again, looking forward to syncing with you!</p>`,
+    notes: [
+      { zh: '很乐意安排时间', note: '<code>乐意</code> (lèyì) = "happy to / willing to" — warmer than 可以. When a Chinese colleague uses this, it\'s a genuine yes. Watch for it.' },
+      { zh: '临时有个会议冲突', note: '<code>临时</code> (línshí) = "last-minute / suddenly". This is the polite reschedule signal — they\'re not saying no. <code>冲突</code> (chōngtū) = conflict/clash.' },
+      { zh: '请告知', note: '<code>请告知</code> (qǐng gàozhī) = "please let me know" — very common written sign-off that hands the ball back to you. Expect this in nearly every reply.' },
+    ],
+    paras: [
+      // ── REPLY A: YES ──────────────────────────────────────
+      [
+        ['·— '],['回复','huífù','Reply',''],['A','','',''],['·：'],['确认见面','quèrèn jiànmiàn','Confirmed meeting','确认 = confirm; 见面 = meet face to face'],['·✅'],
+      ],
+      [
+        ['Rob','','',''],['您好','nín hǎo','Hello (formal)',''],['·，'],
+        ['感谢','gǎnxiè','Thank you','More formal than 谢谢'],['您的','nín de','your',''],['来信','láixìn','message / letter','Lit: incoming letter — standard email opener'],['·！'],
+        ['很高兴','hěn gāoxìng','Very happy to',''],['认识','rènshi','meet / know',''],['您','nín','you (formal)',''],['·。'],
+      ],
+      [
+        ['下周二','xià zhōu èr','Next Tuesday',''],['我们','wǒmen','we',''],['在','zài','will be in',''],['广州','Guǎngzhōu','Guangzhou',''],['·，'],
+        ['届时','jièshí','at that time','Your word — recognise it here!'],['很','hěn','very',''],['乐意','lèyì','happy to / willing to','Warmer than 可以 — genuine yes signal'],['安排','ānpái','arrange',''],['时间','shíjiān','time',''],
+        ['与您','yǔ nín','with you','Formal'],['见面','jiànmiàn','meet',''],['·。'],
+      ],
+      [
+        ['请问','qǐngwèn','May I ask','Polite question opener'],['上午','shàngwǔ','morning',''],['·10点'],['方便','fāngbiàn','convenient',''],['吗','ma','? (question particle)',''],['·？'],
+        ['我们','wǒmen','We',''],['可以','kěyǐ','can',''],['先','xiān','first',''],['在','zài','in',''],['会议室','huìyìshì','meeting room',''],['同步','tóngbù','sync','Your word — he\'s using it exactly as you learned it'],['一下','yīxià','briefly','Softener particle'],['·，'],
+        ['然后','ránhòu','then / afterwards',''],['参观','cānguān','tour / have a look around',''],['一下','yīxià','briefly',''],['办公室','bàngōngshì','office',''],['·。'],
+      ],
+      [
+        ['期待','qīdài','Looking forward to',''],['与您','yǔ nín','with you',''],['面对面','miàn duì miàn','face to face','Lit: face-to-face'],['交流','jiāoliú','exchange / connect',''],['·！'],
+      ],
+      // ── REPLY B: RESCHEDULE ───────────────────────────────
+      [
+        ['·— '],['回复','huífù','Reply',''],['B','','',''],['·：'],['改期','gǎiqī','Reschedule','改 = change; 期 = date/time'],['·🔄'],
+      ],
+      [
+        ['Rob','','',''],['您好','nín hǎo','Hello',''],['·，'],
+        ['感谢','gǎnxiè','Thank you',''],['您的','nín de','your',''],['来信','láixìn','message',''],['·，'],
+        ['很','hěn','very',''],['期待','qīdài','looking forward to',''],['与您','yǔ nín','meeting you',''],['认识','rènshi','meet',''],['·！'],
+      ],
+      [
+        ['不好意思','bù hǎo yìsi','Sorry / Excuse me','Standard soft apology — not as strong as 对不起'],['·，'],
+        ['下周二','xià zhōu èr','next Tuesday',''],['我','wǒ','I',''],['临时','línshí','suddenly / last-minute','Key reschedule signal word'],['有个','yǒu ge','have a',''],['会议','huìyì','meeting',''],['冲突','chōngtū','clash / conflict','冲突 = the reason — not a rejection'],['·，'],
+        ['能否','néng fǒu','would it be possible to','Indirect ask — same pattern as your email'],['改到','gǎi dào','move to / change to',''],['周三','zhōusān','Wednesday',''],['或','huò','or',''],['周四','zhōusì','Thursday',''],['·？'],
+      ],
+      [
+        ['时间','shíjiān','Time',''],['上','shàng','regarding','Postposition — 时间上 = "time-wise"'],['您','nín','you',''],['方便','fāngbiàn','convenient',''],['的话','de huà','if… (conditional)','Set phrase: …的话 = "if that\'s the case"'],['·，'],
+        ['请','qǐng','please',''],['告知','gàozhī','let me know / inform','告知 = the ball is back in your court'],['·，'],['我来','wǒ lái','I will','Lit: I come — signals they\'ll take action'],['安排','ānpái','arrange',''],['·。'],
+      ],
+      [
+        ['再次','zàicì','Once again',''],['感谢','gǎnxiè','thank you',''],['·，'],
+        ['期待','qīdài','Looking forward to',''],['与您','yǔ nín','with you',''],['同步','tóngbù','sync / connect',''],['·！'],
+      ],
+    ],
+  },
+
+// ============================================================
+// READING ENGINE
+// ============================================================
+let currentPassageId = readings[0].id;
+let readingPinyinOn = false;
+let translationOn = false;
+let grammarOn = false;
+
+function toggleReadingPinyin() {
+  readingPinyinOn = !readingPinyinOn;
+  const pill = document.getElementById('togglePinyin');
+  pill.classList.toggle('on', readingPinyinOn);
+  const body = document.getElementById('passageDisplay');
+  body.querySelectorAll('.passage-body').forEach(b => b.classList.toggle('show-pinyin', readingPinyinOn));
+}
+
+function toggleTranslation() {
+  translationOn = !translationOn;
+  document.getElementById('toggleTranslation').classList.toggle('on', translationOn);
+  document.querySelectorAll('.passage-translation').forEach(el => el.classList.toggle('visible', translationOn));
+}
+
+function toggleGrammar() {
+  grammarOn = !grammarOn;
+  document.getElementById('toggleGrammar').classList.toggle('on', grammarOn);
+  document.querySelectorAll('.grammar-notes').forEach(el => el.classList.toggle('visible', grammarOn));
+}
+
+function buildPassageHTML(p) {
+  const levelClass = p.level === 'C1' ? 'level-c1' : 'level-b2';
+  const catNames = { product:'📋 Product/PRD', adtech:'📊 AdTech', ecom:'🛒 Ecommerce', agile:'🔄 Agile', comms:'✉️ Correspondence' };
+
+  let bodyHTML = `<div class="passage-body${readingPinyinOn ? ' show-pinyin' : ''}">`;
+  p.paras.forEach(para => {
+    bodyHTML += `<div class="passage-para">`;
+    para.forEach(tok => {
+      if (typeof tok === 'string') {
+        // Shouldn't happen but fallback
+        bodyHTML += `<span class="punct">${tok.replace('·','')}</span>`;
+      } else {
+        const [hanzi, pinyin, en, note] = tok;
+        if (hanzi.startsWith('·')) {
+          // Punctuation token
+          const punct = hanzi.slice(1);
+          bodyHTML += `<span class="punct">${punct}</span>`;
+        } else if (!hanzi || !pinyin) {
+          // Skip empty
+        } else {
+          const noteAttr = note ? ` data-note="${note.replace(/"/g,'&quot;')}"` : '';
+          bodyHTML += `<span class="w" data-hanzi="${hanzi}" data-pinyin="${pinyin}" data-en="${en.replace(/"/g,'&quot;')}"${noteAttr} onmouseenter="showTooltip(event,this)" onmouseleave="hideTooltip()" onclick="showTooltip(event,this)">` +
+            `<span class="ruby-pin">${pinyin}</span>` +
+            `<span class="hanzi">${hanzi}</span>` +
+            `</span>`;
+        }
+      }
+    });
+    bodyHTML += `</div>`;
+  });
+  bodyHTML += `</div>`;
+
+  // Grammar notes
+  let notesHTML = '';
+  if (p.notes && p.notes.length) {
+    notesHTML = `<div class="grammar-notes${grammarOn ? ' visible' : ''}">
+      <h4>📝 Grammar & Usage Notes</h4>
+      ${p.notes.map(n => `<div class="grammar-note-item"><strong style="color:var(--text)">${n.zh}</strong> — ${n.note}</div>`).join('')}
+    </div>`;
+  }
+
+  return `<div class="passage-card">
+    <div class="passage-header">
+      <div>
+        <div class="passage-title">${p.title}</div>
+        <div class="passage-meta">${p.titleEn} &nbsp;·&nbsp; ${catNames[p.cat]}</div>
+      </div>
+      <span class="level-badge ${levelClass}">${p.level}</span>
+    </div>
+    ${bodyHTML}
+    <div class="passage-translation${translationOn ? ' visible' : ''}">
+      <strong>English Translation</strong>${p.translation}
+    </div>
+    ${notesHTML}
+  </div>`;
+}
+
+function renderPassage(id) {
+  currentPassageId = id;
+  // Update selector buttons
+  document.querySelectorAll('.passage-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.id === id);
+  });
+  const p = readings.find(r => r.id === id);
+  if (!p) return;
+  document.getElementById('passageDisplay').innerHTML = buildPassageHTML(p);
+  // Wire tooltip hide on scroll
+  document.getElementById('passageDisplay').addEventListener('scroll', hideTooltip);
+}
+
+function initPassageSelector() {
+  const sel = document.getElementById('passageSelector');
+  sel.innerHTML = readings.map(r => `
+    <div class="passage-btn${r.id === currentPassageId ? ' active' : ''}" data-id="${r.id}" onclick="renderPassage('${r.id}')">
+      ${r.id === 'prd-keyword' ? '📋' : r.id === 'adtech-coldstart' ? '📊' : r.id === 'standup-slack' ? '🔄' : '🛒'} ${r.title}
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// WORD TOOLTIP
+// ============================================================
+let tooltipTimeout = null;
+function showTooltip(e, el) {
+  const tt = document.getElementById('wordTooltip');
+  document.getElementById('wtHanzi').textContent = el.dataset.hanzi;
+  document.getElementById('wtPinyin').textContent = el.dataset.pinyin;
+  document.getElementById('wtEn').textContent = el.dataset.en;
+  const noteEl = document.getElementById('wtNote');
+  if (el.dataset.note) { noteEl.textContent = el.dataset.note; noteEl.style.display = ''; }
+  else { noteEl.style.display = 'none'; }
+  tt.style.display = '';
+  positionTooltip(e, tt);
+}
+function positionTooltip(e, tt) {
+  const margin = 10;
+  let x = e.clientX + margin;
+  let y = e.clientY + margin;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+  // Check overflow
+  requestAnimationFrame(() => {
+    const rect = tt.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 10) tt.style.left = (e.clientX - rect.width - margin) + 'px';
+    if (rect.bottom > window.innerHeight - 10) tt.style.top = (e.clientY - rect.height - margin) + 'px';
+  });
+}
+function hideTooltip() {
+  document.getElementById('wordTooltip').style.display = 'none';
+}
+document.addEventListener('mousemove', e => {
+  const tt = document.getElementById('wordTooltip');
+  if (tt.style.display !== 'none') positionTooltip(e, tt);
+});
+
+// ============================================================
+// ADD WORDS — Supabase (cloud) with localStorage fallback
+// ============================================================
+const STORAGE_KEY = 'mandarin_trainer_custom_vocab';
+
+// In-memory cache: loaded once on init, kept in sync
+let _customWords = [];
+
+function _lsLoad() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function _lsSave(words) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch {}
+}
+
+async function initCustomWords() {
+  if (USE_SUPABASE && sb) {
+    try {
+      const { data, error } = await sb.from('custom_vocab')
+        .select('*').eq('user_id', USER_ID).order('created_at', { ascending: true });
+      if (error) throw error;
+      _customWords = (data || []).map(r => ({ ...r, custom: true }));
+    } catch(e) {
+      console.warn('Supabase load failed, using localStorage', e);
+      _customWords = _lsLoad();
+    }
+  } else {
+    _customWords = _lsLoad();
+  }
+  renderCustomList();
+  renderRef();
+}
+
+function loadCustomWords() { return _customWords; }
+
+function getAllVocab() {
+  return [...vocab, ..._customWords];
+}
+
+async function _sbAdd(word) {
+  if (!USE_SUPABASE || !sb) return null;
+  const { data, error } = await sb.from('custom_vocab').insert({
+    user_id: USER_ID, cat: word.cat, simp: word.simp, trad: word.trad,
+    pinyin: word.pinyin, en: word.en, note: word.note || ''
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function _sbDelete(id) {
+  if (!USE_SUPABASE || !sb) return;
+  const { error } = await sb.from('custom_vocab').delete().eq('id', id);
+  if (error) throw error;
+}
+
+async function addSingleWord() {
+  const simp = document.getElementById('addSimp').value.trim();
+  const trad = document.getElementById('addTrad').value.trim() || simp;
+  const pinyin = document.getElementById('addPinyin').value.trim();
+  const en = document.getElementById('addEn').value.trim();
+  const cat = document.getElementById('addCat').value;
+  const note = document.getElementById('addNote').value.trim();
+
+  const errEl = document.getElementById('addErrorMsg');
+  const okEl = document.getElementById('addSuccessMsg');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!simp || !pinyin || !en) {
+    errEl.textContent = 'Simplified, pinyin, and English are required.';
+    errEl.style.display = '';
+    return;
+  }
+
+  try {
+    const wordObj = { cat, simp, trad, pinyin, en, note, custom: true };
+    if (USE_SUPABASE && sb) {
+      const row = await _sbAdd(wordObj);
+      _customWords.push({ ...row, custom: true });
+    } else {
+      _customWords.push(wordObj);
+      _lsSave(_customWords);
+    }
+  } catch(e) {
+    errEl.textContent = 'Save failed: ' + e.message;
+    errEl.style.display = '';
+    return;
+  }
+
+  ['addSimp','addTrad','addPinyin','addEn','addNote'].forEach(id => document.getElementById(id).value = '');
+  okEl.textContent = `✓ "${simp}" added! It's now in the quiz and reference table.`;
+  okEl.style.display = '';
+  setTimeout(() => okEl.style.display = 'none', 3000);
+
+  renderCustomList();
+  renderRef();
+}
+
+async function bulkImport() {
+  const text = document.getElementById('bulkText').value.trim();
+  const cat = document.getElementById('bulkCat').value;
+  const errEl = document.getElementById('bulkErrorMsg');
+  const okEl = document.getElementById('bulkSuccessMsg');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!text) { errEl.textContent = 'Paste some lines first.'; errEl.style.display = ''; return; }
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0, skipped = 0;
+
+  for (const line of lines) {
+    const parts = line.split('|').map(p => p.trim());
+    let wordObj = null;
+    if (parts.length === 3) {
+      const [simp, pinyin, en] = parts;
+      if (simp && pinyin && en) wordObj = { cat, simp, trad: simp, pinyin, en, note: '', custom: true };
+      else skipped++;
+    } else if (parts.length >= 4) {
+      const [simp, trad, pinyin, en] = parts;
+      if (simp && pinyin && en) wordObj = { cat, simp, trad: trad || simp, pinyin, en, note: parts[4] || '', custom: true };
+      else skipped++;
+    } else skipped++;
+
+    if (wordObj) {
+      try {
+        if (USE_SUPABASE && sb) {
+          const row = await _sbAdd(wordObj);
+          _customWords.push({ ...row, custom: true });
+        } else {
+          _customWords.push(wordObj);
+        }
+        added++;
+      } catch(e) { skipped++; }
+    }
+  }
+
+  if (!USE_SUPABASE || !sb) _lsSave(_customWords);
+  document.getElementById('bulkText').value = '';
+  okEl.textContent = `✓ Imported ${added} word${added!==1?'s':''}${skipped ? ` (${skipped} skipped — check format)` : ''}.`;
+  okEl.style.display = '';
+  setTimeout(() => okEl.style.display = 'none', 4000);
+  renderCustomList();
+  renderRef();
+}
+
+async function deleteCustomWord(idx) {
+  const word = _customWords[idx];
+  if (!word) return;
+  try {
+    if (USE_SUPABASE && sb && word.id) await _sbDelete(word.id);
+    _customWords.splice(idx, 1);
+    if (!USE_SUPABASE || !sb) _lsSave(_customWords);
+  } catch(e) {
+    console.warn('Delete failed', e);
+  }
+  renderCustomList();
+  renderRef();
+}
+
+function renderCustomList() {
+  const words = _customWords;
+  const container = document.getElementById('customWordsList');
+  const countEl = document.getElementById('customCount');
+  countEl.textContent = words.length + ' word' + (words.length !== 1 ? 's' : '');
+
+  if (words.length === 0) {
+    container.innerHTML = '<div class="empty-custom">No custom words yet.<br>Add your first word on the left.</div>';
+    return;
+  }
+
+  const catColors = { product:'#1a2a4a', adtech:'#2a1a3a', ecom:'#1a2e2a', agile:'#2e2a1a', comms:'#1e2a2e' };
+  const catTextColors = { product:'#6c8ef7', adtech:'#a78bfa', ecom:'#34d399', agile:'#fbbf24', comms:'#22d3ee' };
+  const catNames = { product:'Product', adtech:'AdTech', ecom:'Ecom', agile:'Agile', comms:'Comms' };
+
+  container.innerHTML = words.map((w, i) => `
+    <div class="custom-word-item">
+      <div class="custom-word-main">
+        <div class="custom-word-simp">${w.simp}${w.trad && w.trad !== w.simp ? ' <span style="font-size:12px;color:var(--muted)">/ '+w.trad+'</span>' : ''}</div>
+        <div class="custom-word-pinyin">${w.pinyin}</div>
+        <div class="custom-word-en">${w.en}</div>
+      </div>
+      <span class="custom-word-cat" style="background:${catColors[w.cat]};color:${catTextColors[w.cat]}">${catNames[w.cat]}</span>
+      <button class="ref-play" onclick="speakText('${w.simp.replace(/'/g,"\\'")}')">▶</button>
+      <button class="btn-delete-word" onclick="deleteCustomWord(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+// Override getFiltered to include custom words
+function getFiltered() {
+  const all = getAllVocab();
+  if (quizCat === 'all') return [...all];
+  return all.filter(v => v.cat === quizCat);
+}
+
+// ============================================================
+// TABS (updated to include addwords)
+// ============================================================
+function switchTab(tab) {
+  const names = ['quiz','pronunciation','reference','addwords','reading'];
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab === 'addwords') renderCustomList(); // re-render from in-memory cache
+  if (tab === 'reading') { initPassageSelector(); renderPassage(currentPassageId); }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  checkTTS();
+  newQuiz();
+  renderAllPhrases();
+  renderRef();
+  await initCustomWords();  // loads from Supabase or localStorage
+  initPassageSelector();
+});
+</script>
+</body>
+</html>
